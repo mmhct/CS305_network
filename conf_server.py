@@ -37,6 +37,22 @@ class ConferenceServer:
         '''
         start the ConferenceServer and necessary running tasks to handle clients in this conference
         '''
+        self.running = True
+        loop = asyncio.get_event_loop()
+        server_coro = asyncio.start_server(self.handle_client, '0.0.0.0', self.conf_serve_ports, loop=loop)
+        server = loop.run_until_complete(server_coro)
+
+        print(f'Serving on {server.sockets[0].getsockname()}')
+
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            pass
+
+        server.close()
+        loop.run_until_complete(server.wait_closed())
+        loop.close()
+        self.running = False
 
 
 class MainServer:
@@ -81,6 +97,7 @@ class MainServer:
         """
         start MainServer
         """
+
         pass
 
 

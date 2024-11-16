@@ -6,8 +6,8 @@ Note that you can use your own implementation as well :)
 from io import BytesIO
 import pyaudio
 import cv2
-import pyautogui
 import numpy as np
+import pyautogui
 from PIL import Image, ImageGrab
 from config import *
 
