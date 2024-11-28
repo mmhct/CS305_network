@@ -1,14 +1,16 @@
+from socket import socket, AF_INET, SOCK_STREAM
+
 from util import *
 
 
 class ConferenceClient:
-    def __init__(self,):
+    def __init__(self, ):
         # sync client
         self.is_working = True
-        self.server_addr = None  # server addr
+        self.server_addr = SERVER_IP  # server addr
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
-        self.support_data_types = []  # for some types of data
+        self.support_data_types = ["screen", "camera", "audio"]  # for some types of data
         self.share_data = {}
 
         self.conference_info = None  # you may need to save and update some conference_info regularly
@@ -31,6 +33,14 @@ class ConferenceClient:
         """
         quit your on-going conference
         """
+        if self.on_meeting:
+            print('[Info]: Quit conference')
+            if (self.close_conference()):
+                print('[Info]: Quit conference successfully')
+            else:
+                print('[Warn]: Quit conference failed')
+        else:
+            print('[Warn]: You are not in a conference')
         pass
 
     def cancel_conference(self):
@@ -52,6 +62,18 @@ class ConferenceClient:
         '''
         pass
 
+    def share_audio(self, send_conn):
+        '''
+        running task: share audio data
+        '''
+        pass
+
+    def share_camera(self, send_conn):
+        '''
+        running task: share video data
+        '''
+        pass
+
     def keep_recv(self, recv_conn, data_type, decompress=None):
         '''
         running task: keep receiving certain type of data (save or output)
@@ -62,6 +84,7 @@ class ConferenceClient:
         '''
         running task: output received stream data
         '''
+        #overlay_camera_images(self.share_data['screen'], self.share_data['camera'])
 
     def start_conference(self):
         '''
@@ -80,6 +103,16 @@ class ConferenceClient:
         """
         execute functions based on the command line input
         """
+        serverName = SERVER_IP
+        serverPort = MAIN_SERVER_PORT
+        clientSocket = socket(AF_INET, SOCK_STREAM)
+        clientSocket.connect((serverName, serverPort))
+        sentence = 'Inputlowercasesentence:'
+        clientSocket.send(sentence.encode())
+        modifiedSentence = clientSocket.recv(1024)
+        print('FromServer:', modifiedSentence.decode())
+        clientSocket.close()
+
         while True:
             if not self.on_meeting:
                 status = 'Free'
@@ -123,4 +156,3 @@ class ConferenceClient:
 if __name__ == '__main__':
     client1 = ConferenceClient()
     client1.start()
-
