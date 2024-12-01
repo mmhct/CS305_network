@@ -1,19 +1,22 @@
-from socket import socket, AF_INET, SOCK_STREAM
+import pickle
 
 from util import *
+import socket
 
 
 class ConferenceClient:
     def __init__(self, ):
         # sync client
         self.is_working = True
-        self.server_addr = SERVER_IP  # server addr
+        self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
-        self.support_data_types = ["screen", "camera", "audio"]  # for some types of data
+        self.support_data_types = []  # for some types of data
         self.share_data = {}
-
-        self.conference_info = None  # you may need to save and update some conference_info regularly
+        self.conference_id = None  # 存储当前所在的会议号
+        self.conference_ip = None  # you may need to save and update some conference_info regularly
+        self.conference_port = None
+        self.conference_conn = None
 
         self.recv_data = None  # you may need to save received streamd data from other clients in conference
 
@@ -21,33 +24,80 @@ class ConferenceClient:
         """
         create a conference: send create-conference request to server and obtain necessary data to
         """
-        pass
+        # print(self.conns)
+        if self.on_meeting:
+            print(f"You have already joined the conference {self.conference_id} "
+                  f"({self.conference_ip}:{self.conference_port})")
+        else:
+            cmd = "create"
+            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            print("字典:", data)
+            try:
+                status = data["status"]
+                self.conference_id = data["conference_id"]
+                self.conference_ip = data["conference_ip"]
+                self.conference_port = data["conference_port"]
+                self.on_meeting = True
+
+                # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # client_socket.connect((self.conference_ip, int(self.conference_port)))
+                # self.conference_conn = client_socket
+                # print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
+
+            except ConnectionError as e:
+                print(f"连接失败: {e}")
+                self.conference_conn = None
+            except TypeError as e:  # 报错的话，返回的不是字典，是str,会有TypeError
+                print(e)
+            except Exception as e:
+                print(e)
 
     def join_conference(self, conference_id):
         """
         join a conference: send join-conference request with given conference_id, and obtain necessary data to
         """
-        pass
+        if self.on_meeting:
+            print(f"You have already joined the conference {self.conference_id} "
+                  f"({self.conference_ip}:{self.conference_port})")
+        else:
+            cmd = f"join {conference_id}"
+            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            print("字典:", data)
+            try:
+                status = data["status"]
+                self.conference_id = data["conference_id"]
+                self.conference_ip = data["conference_ip"]
+                self.conference_port = data["conference_port"]
+                self.on_meeting = True
+
+                # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # client_socket.connect((self.conference_ip, int(self.conference_port)))
+                # self.conference_conn = client_socket
+                # print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
+
+            except ConnectionError as e:
+                print(f"连接失败: {e}")
+                self.conference_conn = None
+            except TypeError as e:  # 报错的话，返回的不是字典，是str,会有TypeError
+                print(e)
+            except Exception as e:
+                print(e)
 
     def quit_conference(self):
         """
         quit your on-going conference
         """
-        if self.on_meeting:
-            print('[Info]: Quit conference')
-            if (self.close_conference()):
-                print('[Info]: Quit conference successfully')
-            else:
-                print('[Warn]: Quit conference failed')
-        else:
-            print('[Warn]: You are not in a conference')
-        pass
+        cmd = "quit"
+        self.conns.sendall(pickle.dumps(cmd))
 
     def cancel_conference(self):
         """
         cancel your on-going conference (when you are the conference manager): ask server to close all clients
         """
-        pass
+        cmd = "cancel"
+        self.conns.sendall(pickle.dumps(cmd))
 
     def keep_share(self, data_type, send_conn, capture_function, compress=None, fps_or_frequency=30):
         '''
@@ -62,18 +112,6 @@ class ConferenceClient:
         '''
         pass
 
-    def share_audio(self, send_conn):
-        '''
-        running task: share audio data
-        '''
-        pass
-
-    def share_camera(self, send_conn):
-        '''
-        running task: share video data
-        '''
-        pass
-
     def keep_recv(self, recv_conn, data_type, decompress=None):
         '''
         running task: keep receiving certain type of data (save or output)
@@ -84,7 +122,6 @@ class ConferenceClient:
         '''
         running task: output received stream data
         '''
-        #overlay_camera_images(self.share_data['screen'], self.share_data['camera'])
 
     def start_conference(self):
         '''
@@ -103,16 +140,6 @@ class ConferenceClient:
         """
         execute functions based on the command line input
         """
-        serverName = SERVER_IP
-        serverPort = MAIN_SERVER_PORT
-        clientSocket = socket(AF_INET, SOCK_STREAM)
-        clientSocket.connect((serverName, serverPort))
-        sentence = 'Inputlowercasesentence:'
-        clientSocket.send(sentence.encode())
-        modifiedSentence = clientSocket.recv(1024)
-        print('FromServer:', modifiedSentence.decode())
-        clientSocket.close()
-
         while True:
             if not self.on_meeting:
                 status = 'Free'
@@ -152,7 +179,20 @@ class ConferenceClient:
             if not recognized:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
 
+    def connection_establish(self, server_ip, server_port):
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            client_socket.connect((server_ip, int(server_port)))
+            print(f"已连接到服务器 {server_ip}:{server_port}")
+            self.conns = client_socket
+            self.server_addr = (server_ip, server_port)
+
+        except ConnectionError as e:
+            print(f"连接失败: {e}")
+            self.conns = None
+
 
 if __name__ == '__main__':
     client1 = ConferenceClient()
+    client1.connection_establish(SERVER_IP, MAIN_SERVER_PORT)
     client1.start()
