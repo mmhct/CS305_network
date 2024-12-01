@@ -122,6 +122,36 @@ class ConferenceClient:
         '''
         running task: output received stream data
         '''
+        if self.recv_data is None:
+            print('[Warn]: No data received yet.')
+            return
+
+        # 具体处理接收到的数据类型
+        for data_type, data in self.recv_data.items():
+            if data_type == 'audio':
+                # 这里我们假设音频数据是字节流，可以播放音频
+                self.play_audio(data)
+            elif data_type == 'camera' or data_type == 'screen':
+                # 这里我们假设是图像数据（视频帧）
+                self.display_image(data)
+            else:
+                print(f'[Warn]: Unsupported data type {data_type}')
+
+    def play_audio(self, audio_data):
+        """
+        播放音频数据
+        """
+        # 你可以使用 pyaudio 或其他库来播放音频数据
+        print('[Info]: Playing audio...')
+        streamout.write(audio_data)  # 播放音频流
+
+    def display_image(self, image_data):
+        """
+        显示图像数据
+        """
+        print('[Info]: Displaying image...')
+        image = decompress_image(image_data)
+        image.show()  # 使用 PIL 显示图像
 
     def start_conference(self):
         '''
