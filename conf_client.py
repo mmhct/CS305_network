@@ -105,8 +105,31 @@ class ConferenceClient:
         """
         cancel your on-going conference (when you are the conference manager): ask server to close all clients
         """
-        cmd = "cancel"
-        self.conns.sendall(pickle.dumps(cmd))
+        if not self.on_meeting:
+            print("You are not currently in any conference.")
+        else:
+            cmd = f"cancel {self.conference_id}"
+            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            print("字典:", data)
+
+            try:
+                status = data["status"]
+                if status == "success":
+                    print(f"Conference {self.conference_id} has been successfully cancelled.")
+                    # 重置会议相关状态
+                    self.conference_id = None
+                    self.conference_ip = None
+                    self.conference_port = None
+                    self.on_meeting = False
+                    self.conns = None
+                    self.conference_conn = None
+                else:
+                    print(f"Failed to cancel the conference: {data.get('message', 'No additional message provided')}")
+            except TypeError as e:  # 如果返回的不是字典
+                print(f"Received invalid data from server: {e}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
     def keep_share(self):
         '''
