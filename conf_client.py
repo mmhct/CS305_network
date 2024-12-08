@@ -1,5 +1,6 @@
 import pickle
 import threading
+import time
 
 from util import *
 import socket
@@ -8,26 +9,19 @@ import socket
 class ConferenceClient:
     def __init__(self, ):
         # sync client
-        self.id = 0  # client id,由服务器给出，服务器给出的第一个id是1， 0是无效id
         self.is_working = True
-        self.is_camera_on = False
-        self.is_audio_on = False
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
         self.support_data_types = []  # for some types of data
         self.share_data = {}
         self.conference_id = None  # 存储当前所在的会议号
-        self.conference_ip = None  # *主服务器提供*
-        self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
-        self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
+        self.conference_ip = None  # you may need to save and update some conference_info regularly
+        self.conference_port = None
+        self.conference_conn = None
+        self.is_sharing = None
 
-        self.sock= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
-        self.recv_screen_data={}
-
-        self.udp_sockets = []  # 存储收资料的udp套接字
-        self.udp_conn = None  # 用于接收数据的udp套接字
+        self.recv_data = None  # you may need to save received streamd data from other clients in conference
 
     def create_conference(self):
         """
@@ -103,129 +97,122 @@ class ConferenceClient:
 
     def cancel_conference(self):
         """
-        cancel your on-going conference (when you are the conference manager): ask server to close all clients
+        cancel the current conference: send cancel-conference request to server and handle the response
         """
-        cmd = "cancel"
-        self.conns.sendall(pickle.dumps(cmd))
+        if not self.on_meeting:
+            print("You are not currently in any conference.")
+        else:
+            cmd = f"cancel {self.conference_id}"
+            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            print("字典:", data)
 
-    def keep_share(self):
+            try:
+                status = data["status"]
+                if status == "success":
+                    print(f"Conference {self.conference_id} has been successfully cancelled.")
+                    # 重置会议相关状态
+                    self.conference_id = None
+                    self.conference_ip = None
+                    self.conference_port = None
+                    self.on_meeting = False
+                    self.conns = None
+                    self.conference_conn = None
+                else:
+                    print(f"Failed to cancel the conference: {data.get('message', 'No additional message provided')}")
+            except TypeError as e:  # 如果返回的不是字典
+                print(f"Received invalid data from server: {e}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+    def keep_share(self, data_type, send_conn, capture_function, compress=None, fps_or_frequency=30):
         '''
         running task: keep sharing (capture and send) certain type of data from server or clients (P2P)
         you can create different functions for sharing various kinds of data
+
+        :param data_type: The type of data being shared (e.g., 'video', 'audio', 'screen')
+        :param send_conn: The connection object used to send data
+        :param capture_function: A function that captures the data to be shared
+        :param compress: A function to compress the data before sending (optional)
+        :param fps_or_frequency: The frame rate or frequency of data capture (default is 30)
         '''
-        while True:
-            if not self.on_meeting:
-                break
-            frame = capture_camera()
-            screen= capture_screen()
-            audio_data=streamin.read(CHUNK)
-            pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            compressed_image = compress_image(pil_image)
-            compressed_screen=compress_image(screen)
-            audio_tuple = (self.id, 'audio', audio_data)
-            image_tuple = (self.id, 'image', compressed_image)
-            screen_tuple=(self.id, 'screen', compressed_screen)
-            audio_tuple = pickle.dumps(audio_tuple)
-            image_tuple = pickle.dumps(image_tuple)
-            screen_tuple=pickle.dumps(screen_tuple)
-            if self.is_camera_on:
-                self.sock.sendto(image_tuple, self.conference_conn)
-                self.sock.sendto(screen_tuple, self.conference_conn)
-            if self.is_audio_on:
-                self.sock.sendto(audio_tuple, self.conference_conn)
 
-    def create_recv_thread(self, udp_socket):
-        t = threading.Thread(target=self.keep_recv, args=udp_socket)
-        t.start()
-
-    def keep_recv(self, udp_socket):
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((udp_socket[0], udp_socket[1]))
-
-        while True:
+        def share_loop():
             try:
-                data, addr = sock.recvfrom(65535)
-                received_tuple = pickle.loads(data)
-                id = received_tuple[0]
-                type_ = received_tuple[1]
-                if type_ == 'image' :
-                    image = decompress_image(received_tuple[2])
-                    frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                    self.store_image(id, frame)
-                elif type_ == 'audio':
-                    audio_data = received_tuple[2]
-                    self.play_audio(audio_data)
-                elif type_ == 'screen':
-                    screen=decompress_image(received_tuple[2])
-                    screen=cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
-                    self.store_screen(id, screen)
-            except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
-                break
+                while self.is_sharing:  # 假设有一个标志来控制共享状态
+                    # 捕获数据
+                    data = capture_function()
 
-    # def output_data(self):
-    #     '''
-    #     running task: output received stream data
-    #     '''
-    #     if self.recv_data is None:
-    #         print('[Warn]: No data received yet.')
-    #         return
-    #
-    #     # 具体处理接收到的数据类型
-    #     for data_type, data in self.recv_data.items():
-    #         if data_type == 'audio':
-    #             # 这里我们假设音频数据是字节流，可以播放音频
-    #             self.play_audio(data)
-    #         elif data_type == 'camera' or data_type == 'screen':
-    #             # 这里我们假设是图像数据（视频帧）
-    #             self.display_image(data)
-    #         else:
-    #             print(f'[Warn]: Unsupported data type {data_type}')
+                    # 压缩数据（如果提供了压缩函数）
+                    if compress:
+                        data = compress(data)
+
+                    # 发送数据
+                    send_conn.send(data)
+
+                    # 等待到下一个帧或周期
+                    time.sleep(1 / fps_or_frequency)
+            except Exception as e:
+                print(f"Error occurred during sharing: {e}")
+                # 可以在这里添加错误处理逻辑，比如重试、记录日志或停止共享
+
+        # 创建一个线程来运行共享循环
+        share_thread = threading.Thread(target=share_loop, daemon=True)
+        share_thread.start()
+
+    # 假设有一个方法来启动和停止共享
+    def start_sharing(self):
+        self.is_sharing = True
+
+    def stop_sharing(self):
+        self.is_sharing = False
+
+    def share_switch(self, data_type):
+        '''
+        switch for sharing certain type of data (screen, camera, audio, etc.)
+        '''
+        pass
+
+    def keep_recv(self, recv_conn, data_type, decompress=None):
+        '''
+        running task: keep receiving certain type of data (save or output)
+        you can create other functions for receiving various kinds of data
+        '''
+
+    def output_data(self):
+        '''
+        running task: output received stream data
+        '''
+        if self.recv_data is None:
+            print('[Warn]: No data received yet.')
+            return
+
+        # 具体处理接收到的数据类型
+        for data_type, data in self.recv_data.items():
+            if data_type == 'audio':
+                # 这里我们假设音频数据是字节流，可以播放音频
+                self.play_audio(data)
+            elif data_type == 'camera' or data_type == 'screen':
+                # 这里我们假设是图像数据（视频帧）
+                self.display_image(data)
+            else:
+                print(f'[Warn]: Unsupported data type {data_type}')
 
     def play_audio(self, audio_data):
         """
         播放音频数据
         """
+        # 你可以使用 pyaudio 或其他库来播放音频数据
         print('[Info]: Playing audio...')
-        streamout.write(audio_data) # 播放音频数据
-    def store_image(self, id, image_data):
-        """
-        存储图像数据
-        """
-        self.recv_video_data[id] = image_data
+        streamout.write(audio_data)  # 播放音频流
 
-    def store_screen(self, id, screen_data):
-        """
-        存储屏幕数据
-        """
-        self.recv_screen_data[id] = screen_data
-    def display_image(self):
+    def display_image(self, image_data):
         """
         显示图像数据
         """
-        while True:
-            frames = []
-            self.recv_video_data[0]=capture_camera()
-            frames.append(self.recv_video_data[0])
-            for data in self.recv_video_data.items():
-                frames.append(data)
-            self.recv_video_data.clear()
-            combined_frame = np.hstack(frames)
-            cv2.imshow('Combined Video Feed', combined_frame)
-    def display_screen(self):
-        """
-        显示屏幕数据
-        """
-        while True:
-            frames = []
-            self.recv_screen_data[0]=capture_screen()
-            frames.append(self.recv_screen_data[0])
-            for data in self.recv_screen_data.items():
-                frames.append(data)
-            self.recv_screen_data.clear()
-            combined_frame = np.hstack(frames)
-            cv2.imshow('Combined Screen Feed', combined_frame)
+        print('[Info]: Displaying image...')
+        image = decompress_image(image_data)
+        image.show()  # 使用 PIL 显示图像
 
     def start_conference(self):
         '''
