@@ -233,6 +233,30 @@ class ConferenceClient:
         and
         start necessary running task for conference
         '''
+        if self.on_meeting:
+            print('[Warn]: Already in a conference.')
+            return
+
+        if not self.server_addr:
+            print('[Error]: Server address not set.')
+            return
+
+        if not self.conference_info:
+            print('[Error]: No conference info available.')
+            return
+
+        self.on_meeting = True
+        self.conns = {}  # 初始化连接字典
+
+        for data_type in self.support_data_types:
+            # 对每种数据类型创建连接
+            self.conns[data_type] = self.create_connection(data_type)
+
+        # 启动接收数据的任务
+        print('[Info]: Starting to receive data...')
+        for data_type in self.support_data_types:
+            self.keep_recv()
+
 
     def close_conference(self):
         '''
