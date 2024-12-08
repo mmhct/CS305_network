@@ -1,7 +1,7 @@
 import asyncio
 import pickle
 import threading
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM
 
 from util import *
 
@@ -17,7 +17,7 @@ class ConferenceServer:
         self.data_types = ['screen', 'camera', 'audio']  # example data types in a video conference
         self.owner_ip = None  # the client who create the conference
         self.owner_port = None  # the port for the owner client
-        self.clients_info = None  # 这里写的是tcp连接的ip和port以及udp的ip和port，实际上应该是一个字典，key包含TCP的ip,port;value包含UDP的ip,port
+        self.clients_info = {}  # 实际上应该是一个字典，key包含client_ip;value包含UDP的ip,port
         self.mode = 'Client-Server'  # or 'P2P' if you want to support peer-to-peer conference mode
         self.loop = asyncio.new_event_loop()
         self.tasks = []
@@ -30,13 +30,23 @@ class ConferenceServer:
             # handle data
             await asyncio.sleep(1)
 
-    async def handle_client(self, reader, writer):
+    # async def handle_client(self, reader, writer):
+    #     """
+    #     running task: handle the in-meeting requests or messages from clients
+    #     """
+    #     while self.running:
+    #         # handle client
+    #         await asyncio.sleep(1)
+
+    async def handle_client(self, data, addr, transport):
         """
-        running task: handle the in-meeting requests or messages from clients
+        Async function to handle the reception and forwarding of data.
         """
-        while self.running:
-            # handle client
-            await asyncio.sleep(1)
+        print(f"Received data from {addr}: {data.decode()}")
+        # Forward data to other clients
+        for client in self.clients_info.values():
+            if client != addr:  # Don't send back to the sender
+                transport.sendto(data, client)  # Forward data to other clients
 
     async def log(self):
         while self.running:
@@ -56,24 +66,81 @@ class ConferenceServer:
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.loop.stop()
 
+    '''
+    非异步的版本
+    '''
     def start(self):
         '''
         start the ConferenceServer and necessary running tasks to handle clients in this conference
         '''
-        # # 创建会议室服务器的TCP套接字，方便客户端先通过会议室的ip和port找到对应的会议室，从而分别建立控制信号和数据通道连接
-        # serverSocket = socket(AF_INET, SOCK_STREAM)
-        # serverSocket.bind((self.conference_ip, self.conference_port))
-        # serverSocket.listen(100)
-        # print(f"Conference server listening on {self.conference_ip}:{self.conference_port}")
 
-        self.running = True
-        self.tasks = [
-            self.loop.create_task(self.handle_client(None, None)),
-            self.loop.create_task(self.handle_data(None, None, None)),
-            self.loop.create_task(self.log())
-        ]
-        self.loop.run_forever()
+        print((self.conference_ip, self.conference_port))
 
+        # 创建服务器的UDP套接字
+        serverSocket = socket(AF_INET, SOCK_DGRAM)
+        try:
+            # 绑定服务器套接字到指定的IP和端口
+            serverSocket.bind((self.conference_ip, self.conference_port))
+            print(f"Conference server listening on {self.conference_ip}:{self.conference_port}")
+
+            self.running = True
+            while self.running:
+                # 接收来自客户端的数据
+                data, addr = serverSocket.recvfrom(65535)  # 缓冲区大小为65535字节
+                print(f"Received data from {addr}: {len(data)}bytes")
+
+                # 将发送者的地址加入到客户端列表
+                if addr not in self.clients_info.values():
+                    client_id, _, _ = pickle.dumps(data)
+                    self.clients_info[client_id] = addr
+                    print(f"New client added: {addr}")
+
+                # 将数据转发给其他客户端
+                for client in self.clients_info.values():
+                    if client != addr:  # 不回发给发送者
+                        serverSocket.sendto(data, client)
+                        print(f"Forwarded data to {client}")
+        except OSError as e:
+            print(f"Error occurred: {e}")
+        finally:
+            # 关闭套接字
+            serverSocket.close()
+            print("Server socket closed.")
+
+        # # Create asyncio transport to use for UDP communication
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
+        # server_transport, server_protocol = loop.run_until_complete(
+        #     loop.create_datagram_endpoint(
+        #         lambda: DatagramProtocol(self),
+        #         local_addr=(self.conference_ip, self.conference_port)
+        #     )
+        # )
+        #
+        # self.loop.run_forever()
+
+
+# class DatagramProtocol(asyncio.DatagramProtocol):
+#     def __init__(self, server):
+#         self.server = server
+#         self.transport = None  # Initialize transport attribute
+#
+#     def connection_made(self, transport):
+#         """
+#         This is where we get the transport object.
+#         """
+#         self.transport = transport
+#
+#     def datagram_received(self, data, addr):
+#         """
+#         Handle the incoming data and forward it to other clients.
+#         """
+#         print(f"Received data from {addr}: {data.decode()}")
+#         self.server.clients.append(addr)  # Add the client to the list
+#         # Handle client in a new task
+#         task = self.server.loop.create_task(self.server.handle_client(data, addr, self.transport))
+#         self.server.tasks.append(task)
+#
 
 class MainServer:
     def __init__(self, server_ip, main_port):
@@ -85,20 +152,21 @@ class MainServer:
         self.conference_conns = None
         self.conference_servers = {}  # self.conference_servers[conference_id] = ConferenceManager
         self.max_conference_id = 0
+        self.max_client_id = 0
 
     def handle_create_conference(self, addr):
         """
         create conference: create and start the corresponding ConferenceServer, and reply necessary info to client
         """
         conference_id = self.generate_conference_id()
-        conference_port = conference_id + 10000
+        conference_port = conference_id * 2 + 10000 # 我这里10001有冲突就换了一个
+        # conference_port = 12345
         conference_server = ConferenceServer()
         conference_server.conference_id = conference_id
+        conference_server.conference_ip = self.server_ip
         conference_server.conference_port = conference_port
-        conference_server.conference_ip = self.server_ip  # 这里直接把 Main server的ip赋给conference_server
         conference_server.owner_ip = addr[0]
         conference_server.owner_port = addr[1]
-        # TODO:添加 self.clients_info
         self.conference_servers[conference_id] = conference_server
         threading.Thread(target=conference_server.start).start()
         print({"status": "success", "conference_id": conference_id,
@@ -112,7 +180,7 @@ class MainServer:
         """
         Generate a unique conference ID
         """
-        # TODO:如果删除会议，可能会有重复ID
+        # 如果删除会议，可能会有重复ID
         self.max_conference_id += 1
         return self.max_conference_id
 
@@ -125,16 +193,14 @@ class MainServer:
             conference_server = self.conference_servers[conference_id]
             # Perform operations on the existing conference_server thread
             # For example, you can call a method on the conference_server
-            conference_server.join_conference()  # 这个要定义
-            # TODO:添加 self.clients_info
+            # conference_server.join_conference()  # 这个要定义
             return {"status": "success", "conference_id": conference_id,
                     "conference_ip": conference_server.conference_ip,
                     "conference_port": conference_server.conference_port}
-            # return f"success {conference_id} {conference_server.conference_ip} {conference_server.conference_port}"
+            # return f"success {conference_id} {conference_server.conference_port}"
 
         else:
-            return {"status": "error", "conference_id": None,
-                    "conference_ip": None,
+            return {"status": "error", "conference_id": None, "conference_ip": None,
                     "conference_port": None}
             # return f"error"
 
@@ -165,11 +231,11 @@ class MainServer:
         """
 
         if message.startswith('create'):
-            for conference in self.conference_servers.values():  # TODO:遍历字典
+            for conference in self.conference_servers.values():  # 遍历字典
                 if conference.owner_ip == addr[0] and conference.owner_port == addr[1]:
                     return "You have already created a conference"
 
-            return self.handle_create_conference(addr)  # TODO:这里不能放在else之后
+            return self.handle_create_conference(addr)  # 这里不能放在else之后
         elif message.startswith('join'):
             conference_id = int(message.split(' ')[1])
             return self.handle_join_conference(addr, conference_id)
@@ -177,7 +243,7 @@ class MainServer:
             return self.handle_quit_conference(addr)
         elif message.startswith('cancel'):
             return self.handle_cancel_conference(addr)
-        # TODO:invalid 指令
+        # invalid 指令
         else:
             return "Invalid command"
 
@@ -214,6 +280,12 @@ class MainServer:
         while True:
             connectionSocket, addr = serverSocket.accept()
             print(f"接受到来自 {addr} 的连接请求")
+
+            # 在建立TCP连接时，给客户端分配不重复的id
+            self.max_client_id += 1
+            serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
+            connectionSocket.send(serialized_id)
+
             client_thread = threading.Thread(target=self.handle_client, args=(connectionSocket, addr))
             client_thread.start()
 

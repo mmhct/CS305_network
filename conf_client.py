@@ -22,9 +22,9 @@ class ConferenceClient:
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
 
-        self.sock= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
-        self.recv_screen_data={}
+        self.recv_screen_data = {}
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -43,16 +43,15 @@ class ConferenceClient:
             data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
             print("字典:", data)
             try:
-                status = data["status"]
-                self.conference_id = data["conference_id"]
-                self.conference_ip = data["conference_ip"]
-                self.conference_port = data["conference_port"]
-                self.on_meeting = True
+                if isinstance(data, dict):
+                    status = data["status"]
+                    self.conference_id = data["conference_id"]
+                    self.conference_ip = data["conference_ip"]
+                    self.conference_port = data["conference_port"]
+                    self.on_meeting = True
 
-                # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                # client_socket.connect((self.conference_ip, int(self.conference_port)))
-                # self.conference_conn = client_socket
-                # print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
+                    self.sock.connect((self.conference_ip, int(self.conference_port)))
+                    print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -75,16 +74,15 @@ class ConferenceClient:
             data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
             print("字典:", data)
             try:
-                status = data["status"]
-                self.conference_id = data["conference_id"]
-                self.conference_ip = data["conference_ip"]
-                self.conference_port = data["conference_port"]
-                self.on_meeting = True
+                if isinstance(data, dict):
+                    status = data["status"]
+                    self.conference_id = data["conference_id"]
+                    self.conference_ip = data["conference_ip"]
+                    self.conference_port = data["conference_port"]
+                    self.on_meeting = True
 
-                # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                # client_socket.connect((self.conference_ip, int(self.conference_port)))
-                # self.conference_conn = client_socket
-                # print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
+                    self.sock.connect((self.conference_ip, int(self.conference_port)))
+                    print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -140,17 +138,17 @@ class ConferenceClient:
             if not self.on_meeting:
                 break
             frame = capture_camera()
-            screen= capture_screen()
-            audio_data=streamin.read(CHUNK)
+            screen = capture_screen()
+            audio_data = streamin.read(CHUNK)
             pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             compressed_image = compress_image(pil_image)
-            compressed_screen=compress_image(screen)
+            compressed_screen = compress_image(screen)
             audio_tuple = (self.id, 'audio', audio_data)
             image_tuple = (self.id, 'image', compressed_image)
-            screen_tuple=(self.id, 'screen', compressed_screen)
+            screen_tuple = (self.id, 'screen', compressed_screen)
             audio_tuple = pickle.dumps(audio_tuple)
             image_tuple = pickle.dumps(image_tuple)
-            screen_tuple=pickle.dumps(screen_tuple)
+            screen_tuple = pickle.dumps(screen_tuple)
             if self.is_camera_on:
                 self.sock.sendto(image_tuple, self.conference_conn)
                 self.sock.sendto(screen_tuple, self.conference_conn)
@@ -158,7 +156,7 @@ class ConferenceClient:
                 self.sock.sendto(audio_tuple, self.conference_conn)
 
     def create_recv_thread(self, udp_socket):
-        t = threading.Thread(target=self.keep_recv, args=udp_socket)
+        t = threading.Thread(target=self.keep_recv, args=(udp_socket,))
         t.start()
 
     def keep_recv(self, udp_socket):
@@ -172,7 +170,7 @@ class ConferenceClient:
                 received_tuple = pickle.loads(data)
                 id = received_tuple[0]
                 type_ = received_tuple[1]
-                if type_ == 'image' :
+                if type_ == 'image':
                     image = decompress_image(received_tuple[2])
                     frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                     self.store_image(id, frame)
@@ -180,8 +178,8 @@ class ConferenceClient:
                     audio_data = received_tuple[2]
                     self.play_audio(audio_data)
                 elif type_ == 'screen':
-                    screen=decompress_image(received_tuple[2])
-                    screen=cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
+                    screen = decompress_image(received_tuple[2])
+                    screen = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
                     self.store_screen(id, screen)
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
@@ -211,7 +209,8 @@ class ConferenceClient:
         播放音频数据
         """
         print('[Info]: Playing audio...')
-        streamout.write(audio_data) # 播放音频数据
+        streamout.write(audio_data)  # 播放音频数据
+
     def store_image(self, id, image_data):
         """
         存储图像数据
@@ -223,26 +222,28 @@ class ConferenceClient:
         存储屏幕数据
         """
         self.recv_screen_data[id] = screen_data
+
     def display_image(self):
         """
         显示图像数据
         """
         while True:
             frames = []
-            self.recv_video_data[0]=capture_camera()
+            self.recv_video_data[0] = capture_camera()
             frames.append(self.recv_video_data[0])
             for data in self.recv_video_data.items():
                 frames.append(data)
             self.recv_video_data.clear()
             combined_frame = np.hstack(frames)
             cv2.imshow('Combined Video Feed', combined_frame)
+
     def display_screen(self):
         """
         显示屏幕数据
         """
         while True:
             frames = []
-            self.recv_screen_data[0]=capture_screen()
+            self.recv_screen_data[0] = capture_screen()
             frames.append(self.recv_screen_data[0])
             for data in self.recv_screen_data.items():
                 frames.append(data)
@@ -313,6 +314,9 @@ class ConferenceClient:
             print(f"已连接到服务器 {server_ip}:{server_port}")
             self.conns = client_socket
             self.server_addr = (server_ip, server_port)
+
+            self.id = pickle.loads(self.conns.recv(1024))  # 反序列化收到的id
+            print(f"分配到的客户端id:{self.id}")
 
         except ConnectionError as e:
             print(f"连接失败: {e}")
