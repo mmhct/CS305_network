@@ -1,6 +1,7 @@
 import asyncio
 import pickle
 import threading
+import time
 
 from util import *
 import socket
@@ -254,37 +255,67 @@ class ConferenceClient:
         """
         self.recv_screen_data[id] = screen_data
 
-    async def display_image(self):
+    # async def display_image(self):
+    #     """
+    #     显示图像数据
+    #     """
+    #     while True:
+    #         frames = []
+    #         self.recv_video_data[0] = capture_camera()
+    #         frames.append(self.recv_video_data[0])
+    #         for client_id, data in self.recv_video_data.items():
+    #             frames.append(data)
+    #         self.recv_video_data.clear()
+    #         combined_frame = np.hstack(frames)
+    #         cv2.imshow('Combined Video Feed', combined_frame)
+    #         cv2.waitKey(1)
+    #
+    #         # await asyncio.sleep(0.03)  # 控制刷新率
+    #
+    # async def display_screen(self):
+    #     """
+    #     显示屏幕数据
+    #     """
+    #     while True:
+    #         frames = []
+    #         self.recv_screen_data[0] = capture_screen()
+    #         frames.append(self.recv_screen_data[0])
+    #         for client_id, data in self.recv_screen_data.items():
+    #             frames.append(data)
+    #         self.recv_screen_data.clear()
+    #         combined_frame = np.hstack(frames)
+    #         cv2.imshow('Combined Screen Feed', combined_frame)
+    #         cv2.waitKey(1)
+    #
+    #         # await asyncio.sleep(0.03)  # 控制刷新率
+
+    async def display_combined(self):
         """
-        显示图像数据
+        显示图像和屏幕数据
         """
         while True:
-            frames = []
+            frames1 = []
+            frames2 = []
             self.recv_video_data[0] = capture_camera()
-            frames.append(self.recv_video_data[0])
-            for client_id, data in self.recv_video_data.items():
-                frames.append(data)
-            self.recv_video_data.clear()
-            combined_frame = np.hstack(frames)
-            cv2.imshow('Combined Video Feed', combined_frame)
-
-            await asyncio.sleep(0.03)  # 控制刷新率
-
-    async def display_screen(self):
-        """
-        显示屏幕数据
-        """
-        while True:
-            frames = []
             self.recv_screen_data[0] = capture_screen()
-            frames.append(self.recv_screen_data[0])
-            for client_id, data in self.recv_screen_data.items():
-                frames.append(data)
-            self.recv_screen_data.clear()
-            combined_frame = np.hstack(frames)
-            cv2.imshow('Combined Screen Feed', combined_frame)
+            frames1.append(self.recv_video_data[0])
+            frames2.append(self.recv_screen_data[0])
+            frames1.append(self.recv_video_data[0])
+            frames2.append(self.recv_screen_data[0])
+            combined_image = overlay_camera_images(self.recv_screen_data[0], frames1)
+            cv2.imshow('Combined Video and Screen Feed', np.array(combined_image))
 
-            await asyncio.sleep(0.03)  # 控制刷新率
+            # for client_id, data in self.recv_video_data.items():
+            #     frames.append(data)
+            # for client_id, data in self.recv_screen_data.items():
+            #     frames.append(data)
+            #frames.append(self.recv_screen_data[0])
+            # self.recv_video_data.clear()
+            # self.recv_screen_data.clear()
+            # combined_frame = np.hstack(frames)
+            # cv2.imshow(, combined_frame)
+            cv2.waitKey(1)
+            # await asyncio.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
         '''
@@ -348,8 +379,9 @@ class ConferenceClient:
         并发运行 display_image, display_screen 和 start
         """
         await asyncio.gather(
-            self.display_image(),
-            self.display_screen(),
+            # self.display_image(),
+            # self.display_screen(),
+            self.display_combined(),
             self.keep_share(),
             self.keep_recv(),
             self.start()
