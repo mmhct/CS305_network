@@ -16,8 +16,8 @@ class ConferenceClient:
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
-        self.support_data_types = []  # for some types of data
-        self.share_data = {}
+        self.support_data_types = ['screen', 'camera', 'audio']  # for some types of data
+        # self.share_data = {}
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
@@ -150,9 +150,10 @@ class ConferenceClient:
             audio_tuple = pickle.dumps(audio_tuple)
             image_tuple = pickle.dumps(image_tuple)
             screen_tuple = pickle.dumps(screen_tuple)
+            if self.is_screen_on:
+                self.sock.sendto(screen_tuple, self.conference_conn)
             if self.is_camera_on:
                 self.sock.sendto(image_tuple, self.conference_conn)
-                self.sock.sendto(screen_tuple, self.conference_conn)
             if self.is_audio_on:
                 self.sock.sendto(audio_tuple, self.conference_conn)
 
@@ -345,7 +346,7 @@ class ConferenceClient:
                         print('[Warn]: Input conference ID must be in digital form')
                 elif fields[0] == 'switch':
                     data_type = fields[1]
-                    if data_type in self.share_data.keys():
+                    if data_type in self.support_data_types:
                         self.share_switch(data_type)
                 else:
                     recognized = False
