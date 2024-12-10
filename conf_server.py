@@ -97,7 +97,7 @@ class ConferenceServer:
 
                 # 将数据转发给其他客户端
                 for client in self.clients_info.values():
-                    if client != addr:  # 不回发给发送者
+                    # if client != addr:  # 不回发给发送者
                         serverSocket.sendto(data, client)
                         print(f"Forwarded data to {client}")
         except OSError as e:
@@ -273,21 +273,39 @@ class MainServer:
         """
         start MainServer
         """
-        serverSocket = socket(AF_INET, SOCK_STREAM)
-        serverSocket.bind((self.server_ip, self.server_port))
-        serverSocket.listen(100)
-        print("The server is ready to receive")
+        try:
+            serverSocket = socket(AF_INET, SOCK_STREAM)
+            serverSocket.bind((self.server_ip, self.server_port))
+            serverSocket.listen(100)
+            print(f"The server{(self.server_ip, self.server_port)} is ready to receive")
+        except OSError as e:
+            print(f"[Error] Server initialization failed: {e}")
+            return
+
         while True:
-            connectionSocket, addr = serverSocket.accept()
-            print(f"接受到来自 {addr} 的连接请求")
+            try:
+                connectionSocket, addr = serverSocket.accept()
+                print(f"接受到来自 {addr} 的连接请求")
+            except OSError as e:
+                print(f"[Error] Accepting connection failed: {e}")
+                continue
 
-            # 在建立TCP连接时，给客户端分配不重复的id
-            self.max_client_id += 1
-            serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
-            connectionSocket.send(serialized_id)
+            try:
+                # 在建立TCP连接时，给客户端分配不重复的id
+                self.max_client_id += 1
+                serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
+                connectionSocket.send(serialized_id)
+            except (OSError, pickle.PickleError) as e:
+                print(f"[Error] Sending client ID to {addr} failed: {e}")
+                connectionSocket.close()
+                continue
 
-            client_thread = threading.Thread(target=self.handle_client, args=(connectionSocket, addr))
-            client_thread.start()
+            try:
+                client_thread = threading.Thread(target=self.handle_client, args=(connectionSocket, addr))
+                client_thread.start()
+            except Exception as e:
+                print(f"[Error] Starting thread for client {addr} failed: {e}")
+                connectionSocket.close()
 
 
 if __name__ == '__main__':

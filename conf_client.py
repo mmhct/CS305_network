@@ -1,3 +1,4 @@
+import asyncio
 import pickle
 import threading
 
@@ -40,8 +41,8 @@ class ConferenceClient:
                   f"({self.conference_ip}:{self.conference_port})")
         else:
             cmd = "create"
-            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
-            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
             try:
                 if isinstance(data, dict):
@@ -51,7 +52,7 @@ class ConferenceClient:
                     self.conference_port = data["conference_port"]
                     self.on_meeting = True
 
-                    self.sock.connect((self.conference_ip, int(self.conference_port)))
+                    self.conference_conn = (self.conference_ip, int(self.conference_port))
                     print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
             except ConnectionError as e:
@@ -71,8 +72,8 @@ class ConferenceClient:
                   f"({self.conference_ip}:{self.conference_port})")
         else:
             cmd = f"join {conference_id}"
-            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
-            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
             try:
                 if isinstance(data, dict):
@@ -82,7 +83,7 @@ class ConferenceClient:
                     self.conference_port = data["conference_port"]
                     self.on_meeting = True
 
-                    self.sock.connect((self.conference_ip, int(self.conference_port)))
+                    self.conference_conn = (self.conference_ip, int(self.conference_port))
                     print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
             except ConnectionError as e:
@@ -98,7 +99,7 @@ class ConferenceClient:
         quit your on-going conference
         """
         cmd = "quit"
-        self.conns.sendall(pickle.dumps(cmd))
+        self.tcp_conn.sendall(pickle.dumps(cmd))
 
     def cancel_conference(self):
         """
@@ -108,8 +109,8 @@ class ConferenceClient:
             print("You are not currently in any conference.")
         else:
             cmd = f"cancel {self.conference_id}"
-            self.conns.sendall(pickle.dumps(cmd))  # 序列化发送内容
-            data = pickle.loads(self.conns.recv(1024))  # 反序列化收到的data
+            self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
 
             try:
@@ -121,7 +122,7 @@ class ConferenceClient:
                     self.conference_ip = None
                     self.conference_port = None
                     self.on_meeting = False
-                    self.conns = None
+                    self.tcp_conn = None
                     self.conference_conn = None
                 else:
                     print(f"Failed to cancel the conference: {data.get('message', 'No additional message provided')}")
@@ -130,14 +131,15 @@ class ConferenceClient:
             except Exception as e:
                 print(f"An error occurred: {e}")
 
-    def keep_share(self):
+    async def keep_share(self):
         '''
         running task: keep sharing (capture and send) certain type of data from server or clients (P2P)
         you can create different functions for sharing various kinds of data
         '''
         while True:
             if not self.on_meeting:
-                break
+                await asyncio.sleep(0.03)  # 控制刷新率
+                continue
             frame = capture_camera()
             screen = capture_screen()
             audio_data = streamin.read(CHUNK)
@@ -151,11 +153,16 @@ class ConferenceClient:
             image_tuple = pickle.dumps(image_tuple)
             screen_tuple = pickle.dumps(screen_tuple)
             if self.is_screen_on:
+                print("sending screen data to server")
                 self.sock.sendto(screen_tuple, self.conference_conn)
             if self.is_camera_on:
+                print("sending camera data to server")
                 self.sock.sendto(image_tuple, self.conference_conn)
             if self.is_audio_on:
+                print("sending audio data to server")
                 self.sock.sendto(audio_tuple, self.conference_conn)
+            print("keep sharing data")
+            await asyncio.sleep(0.03)  # 控制刷新率
 
     def share_switch(self, data_type):
         '''
@@ -184,15 +191,13 @@ class ConferenceClient:
         t = threading.Thread(target=self.keep_recv, args=(udp_socket,))
         t.start()
 
-    def keep_recv(self, udp_socket):
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((udp_socket[0], udp_socket[1]))
+    async def keep_recv(self):
 
         while True:
             try:
-                data, addr = sock.recvfrom(65535)
+                data, addr = self.sock.recvfrom(65535)
                 received_tuple = pickle.loads(data)
+                print(f"received data from {addr}: {len(data)} bytes")
                 id = received_tuple[0]
                 type_ = received_tuple[1]
                 if type_ == 'image':
@@ -209,6 +214,7 @@ class ConferenceClient:
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
+            await asyncio.sleep(0.03)  # 控制刷新率
 
     # def output_data(self):
     #     '''
@@ -248,7 +254,7 @@ class ConferenceClient:
         """
         self.recv_screen_data[id] = screen_data
 
-    def display_image(self):
+    async def display_image(self):
         """
         显示图像数据
         """
@@ -256,13 +262,15 @@ class ConferenceClient:
             frames = []
             self.recv_video_data[0] = capture_camera()
             frames.append(self.recv_video_data[0])
-            for data in self.recv_video_data.items():
+            for client_id, data in self.recv_video_data.items():
                 frames.append(data)
             self.recv_video_data.clear()
             combined_frame = np.hstack(frames)
             cv2.imshow('Combined Video Feed', combined_frame)
 
-    def display_screen(self):
+            await asyncio.sleep(0.03)  # 控制刷新率
+
+    async def display_screen(self):
         """
         显示屏幕数据
         """
@@ -270,11 +278,13 @@ class ConferenceClient:
             frames = []
             self.recv_screen_data[0] = capture_screen()
             frames.append(self.recv_screen_data[0])
-            for data in self.recv_screen_data.items():
+            for client_id, data in self.recv_screen_data.items():
                 frames.append(data)
             self.recv_screen_data.clear()
             combined_frame = np.hstack(frames)
             cv2.imshow('Combined Screen Feed', combined_frame)
+
+            await asyncio.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
         '''
@@ -282,30 +292,6 @@ class ConferenceClient:
         and
         start necessary running task for conference
         '''
-        if self.on_meeting:
-            print('[Warn]: Already in a conference.')
-            return
-
-        if not self.server_addr:
-            print('[Error]: Server address not set.')
-            return
-
-        if not self.conference_info:
-            print('[Error]: No conference info available.')
-            return
-
-        self.on_meeting = True
-        self.conns = {}  # 初始化连接字典
-
-        for data_type in self.support_data_types:
-            # 对每种数据类型创建连接
-            self.conns[data_type] = self.create_connection(data_type)
-
-        # 启动接收数据的任务
-        print('[Info]: Starting to receive data...')
-        for data_type in self.support_data_types:
-            self.keep_recv()
-
 
     def close_conference(self):
         '''
@@ -313,7 +299,7 @@ class ConferenceClient:
         pay attention to the exception handling
         '''
 
-    def start(self):
+    async def start(self):
         """
         execute functions based on the command line input
         """
@@ -355,24 +341,37 @@ class ConferenceClient:
 
             if not recognized:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
+            await asyncio.sleep(0.1)  # 给其他任务留出时间执行
+
+    async def run(self):
+        """
+        并发运行 display_image, display_screen 和 start
+        """
+        await asyncio.gather(
+            self.display_image(),
+            self.display_screen(),
+            self.keep_share(),
+            self.keep_recv(),
+            self.start()
+        )
 
     def connection_establish(self, server_ip, server_port):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             client_socket.connect((server_ip, int(server_port)))
             print(f"已连接到服务器 {server_ip}:{server_port}")
-            self.conns = client_socket
+            self.tcp_conn = client_socket
             self.server_addr = (server_ip, server_port)
 
-            self.id = pickle.loads(self.conns.recv(1024))  # 反序列化收到的id
+            self.id = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的id
             print(f"分配到的客户端id:{self.id}")
 
         except ConnectionError as e:
             print(f"连接失败: {e}")
-            self.conns = None
+            self.tcp_conn = None
 
 
 if __name__ == '__main__':
     client1 = ConferenceClient()
     client1.connection_establish(SERVER_IP, MAIN_SERVER_PORT)
-    client1.start()
+    asyncio.run(client1.run())
