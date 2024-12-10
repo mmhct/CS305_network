@@ -10,6 +10,7 @@ class ConferenceClient:
         # sync client
         self.id = 0  # client id,由服务器给出，服务器给出的第一个id是1， 0是无效id
         self.is_working = True
+        self.is_screen_on = False
         self.is_camera_on = False
         self.is_audio_on = False
         self.server_addr = None  # server addr
@@ -154,6 +155,29 @@ class ConferenceClient:
                 self.sock.sendto(screen_tuple, self.conference_conn)
             if self.is_audio_on:
                 self.sock.sendto(audio_tuple, self.conference_conn)
+
+    def share_switch(self, data_type):
+        '''
+        switch for sharing certain type of data (screen, camera, audio, etc.)
+        '''
+        if data_type == 'screen':
+            self.is_screen_on = not self.is_screen_on
+            if self.is_screen_on:
+                print("switch screen on")
+            else:
+                print("switch screen off")
+        if data_type == 'camera':
+            self.is_camera_on = not self.is_camera_on
+            if self.is_camera_on:
+                print("switch camera on")
+            else:
+                print("switch camera off")
+        if data_type == 'audio':
+            self.is_audio_on = not self.is_audio_on
+            if self.is_audio_on:
+                print("switch audio on")
+            else:
+                print("switch audio off")
 
     def create_recv_thread(self, udp_socket):
         t = threading.Thread(target=self.keep_recv, args=(udp_socket,))
