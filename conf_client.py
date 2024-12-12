@@ -298,6 +298,9 @@ class ConferenceClient:
             frames2 = []
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
+            self.recv_video_data[1] = capture_camera()
+            self.recv_screen_data[1] = capture_screen()
+
             for client_id, data in self.recv_video_data.items():
                 frames1.append(data)
             for client_id, data in self.recv_screen_data.items():
@@ -321,7 +324,7 @@ class ConferenceClient:
             # combined_frame = np.hstack(frames)
             # cv2.imshow(, combined_frame)
             cv2.waitKey(1)
-            # await asyncio.sleep(0.03)  # 控制刷新率
+            #await asyncio.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
         '''
@@ -380,14 +383,21 @@ class ConferenceClient:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
             await asyncio.sleep(0.1)  # 给其他任务留出时间执行
 
+    def start_display_combined_thread(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.display_combined())
+
     async def run(self):
         """
         并发运行 display_image, display_screen 和 start
         """
+        display_thread = threading.Thread(target=self.start_display_combined_thread)
+        display_thread.start()
         await asyncio.gather(
             # self.display_image(),
             # self.display_screen(),
-            self.display_combined(),
+            # self.display_combined(),
             self.keep_share(),
             self.keep_recv(),
             self.start()
