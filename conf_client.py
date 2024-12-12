@@ -298,12 +298,18 @@ class ConferenceClient:
             frames2 = []
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
-            frames1.append(self.recv_video_data[0])
-            frames2.append(self.recv_screen_data[0])
-            frames1.append(self.recv_video_data[0])
-            frames2.append(self.recv_screen_data[0])
-            combined_image = overlay_camera_images(self.recv_screen_data[0], frames1)
-            cv2.imshow('Combined Video and Screen Feed', np.array(combined_image))
+            for client_id, data in self.recv_video_data.items():
+                frames1.append(data)
+            for client_id, data in self.recv_screen_data.items():
+                frames2.append(data)
+            # frames1.append(self.recv_video_data[0])
+            # frames2.append(self.recv_screen_data[0])
+            # frames1.append(self.recv_video_data[0])
+            # frames2.append(self.recv_screen_data[0])
+            # combined_image = overlay_camera_images(self.recv_screen_data[0], frames1)
+            for i in range(len(frames2)):
+                combined_image = overlay_camera_images(frames2[i], frames1)
+                cv2.imshow(str(i), np.array(combined_image))
 
             # for client_id, data in self.recv_video_data.items():
             #     frames.append(data)
