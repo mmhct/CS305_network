@@ -310,7 +310,7 @@ class ConferenceClient:
                 print("sending text data to server")
                 self.sock.sendto(text_tuple, self.conference_conn)
 
-            if len(fields) == 1:
+            elif len(fields) == 1:
                 if cmd_input in ('?', '？'):
                     print(HELP)
                 elif cmd_input == 'create':
