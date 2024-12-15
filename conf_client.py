@@ -57,6 +57,12 @@ class ConferenceClient:
                     self.conference_conn = (self.conference_ip, int(self.conference_port))
                     print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
+                    text = f"{NAME} comes in"
+                    text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                    text_tuple = (self.id, 'text', text)
+                    text_tuple = pickle.dumps(text_tuple)
+                    self.sock.sendto(text_tuple, self.conference_conn)
+
             except ConnectionError as e:
                 print(f"连接失败: {e}")
                 self.conference_conn = None
@@ -87,6 +93,12 @@ class ConferenceClient:
 
                     self.conference_conn = (self.conference_ip, int(self.conference_port))
                     print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
+
+                    text = f"{NAME} comes in"
+                    text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                    text_tuple = (self.id, 'text', text)
+                    text_tuple = pickle.dumps(text_tuple)
+                    self.sock.sendto(text_tuple, self.conference_conn)
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
