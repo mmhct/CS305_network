@@ -16,7 +16,7 @@ class ConferenceClient:
         self.is_audio_on = False
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
-        self.conns = None  # you may need to maintain multiple conns for a single conference
+        self.tcp_conn = None  # you may need to maintain multiple conns for a single conference
         self.support_data_types = ['screen', 'camera', 'audio', 'text']  # for some types of data
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
