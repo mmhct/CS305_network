@@ -144,8 +144,8 @@ class ConferenceClient:
             frame = capture_camera()
             screen = capture_screen()
             audio_data = streamin.read(CHUNK)
-            pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            compressed_image = compress_image(pil_image)
+            # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            compressed_image = compress_image(frame)
             compressed_screen = compress_image(screen)
             audio_tuple = (self.id, 'audio', audio_data)
             image_tuple = (self.id, 'image', compressed_image)
@@ -298,8 +298,8 @@ class ConferenceClient:
             frames2 = []
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
-            self.recv_video_data[1] = capture_camera()
-            self.recv_screen_data[1] = capture_screen()
+            # self.recv_video_data[1] = capture_camera()
+            # self.recv_screen_data[1] = capture_screen()
 
             for client_id, data in self.recv_video_data.items():
                 frames1.append(data)
