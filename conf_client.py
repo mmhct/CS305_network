@@ -132,7 +132,7 @@ class ConferenceClient:
             except Exception as e:
                 print(f"An error occurred: {e}")
 
-    async def keep_share(self):
+    def keep_share(self):
         '''
         running task: keep sharing (capture and send) certain type of data from server or clients (P2P)
         you can create different functions for sharing various kinds of data
