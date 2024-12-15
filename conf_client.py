@@ -1,15 +1,12 @@
-import asyncio
-import pickle
 import threading
+import pickle
+import socket
 import time
 
 from util import *
-import socket
-
 
 class ConferenceClient:
-    def __init__(self, ):
-        # sync client
+    def __init__(self):
         self.id = 0  # client id,由服务器给出，服务器给出的第一个id是1， 0是无效id
         self.is_working = True
         self.is_screen_on = False
@@ -19,7 +16,6 @@ class ConferenceClient:
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
         self.support_data_types = ['screen', 'camera', 'audio']  # for some types of data
-        # self.share_data = {}
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
@@ -139,7 +135,7 @@ class ConferenceClient:
         '''
         while True:
             if not self.on_meeting:
-                await asyncio.sleep(0.03)  # 控制刷新率
+                time.sleep(0.03)  # 控制刷新率
                 continue
             frame = capture_camera()
             screen = capture_screen()
@@ -163,7 +159,7 @@ class ConferenceClient:
                 print("sending audio data to server")
                 self.sock.sendto(audio_tuple, self.conference_conn)
             print("keep sharing data")
-            await asyncio.sleep(0.03)  # 控制刷新率
+            time.sleep(0.03)  # 控制刷新率
 
     def share_switch(self, data_type):
         '''
@@ -188,12 +184,7 @@ class ConferenceClient:
             else:
                 print("switch audio off")
 
-    def create_recv_thread(self, udp_socket):
-        t = threading.Thread(target=self.keep_recv, args=(udp_socket,))
-        t.start()
-
-    async def keep_recv(self):
-
+    def keep_recv(self):
         while True:
             try:
                 data, addr = self.sock.recvfrom(65535)
@@ -215,26 +206,6 @@ class ConferenceClient:
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
-            await asyncio.sleep(0.03)  # 控制刷新率
-
-    # def output_data(self):
-    #     '''
-    #     running task: output received stream data
-    #     '''
-    #     if self.recv_data is None:
-    #         print('[Warn]: No data received yet.')
-    #         return
-    #
-    #     # 具体处理接收到的数据类型
-    #     for data_type, data in self.recv_data.items():
-    #         if data_type == 'audio':
-    #             # 这里我们假设音频数据是字节流，可以播放音频
-    #             self.play_audio(data)
-    #         elif data_type == 'camera' or data_type == 'screen':
-    #             # 这里我们假设是图像数据（视频帧）
-    #             self.display_image(data)
-    #         else:
-    #             print(f'[Warn]: Unsupported data type {data_type}')
 
     def play_audio(self, audio_data):
         """
@@ -255,41 +226,7 @@ class ConferenceClient:
         """
         self.recv_screen_data[id] = screen_data
 
-    # async def display_image(self):
-    #     """
-    #     显示图像数据
-    #     """
-    #     while True:
-    #         frames = []
-    #         self.recv_video_data[0] = capture_camera()
-    #         frames.append(self.recv_video_data[0])
-    #         for client_id, data in self.recv_video_data.items():
-    #             frames.append(data)
-    #         self.recv_video_data.clear()
-    #         combined_frame = np.hstack(frames)
-    #         cv2.imshow('Combined Video Feed', combined_frame)
-    #         cv2.waitKey(1)
-    #
-    #         # await asyncio.sleep(0.03)  # 控制刷新率
-    #
-    # async def display_screen(self):
-    #     """
-    #     显示屏幕数据
-    #     """
-    #     while True:
-    #         frames = []
-    #         self.recv_screen_data[0] = capture_screen()
-    #         frames.append(self.recv_screen_data[0])
-    #         for client_id, data in self.recv_screen_data.items():
-    #             frames.append(data)
-    #         self.recv_screen_data.clear()
-    #         combined_frame = np.hstack(frames)
-    #         cv2.imshow('Combined Screen Feed', combined_frame)
-    #         cv2.waitKey(1)
-    #
-    #         # await asyncio.sleep(0.03)  # 控制刷新率
-
-    async def display_combined(self):
+    def display_combined(self):
         """
         显示图像和屏幕数据
         """
@@ -324,7 +261,7 @@ class ConferenceClient:
             # combined_frame = np.hstack(frames)
             # cv2.imshow(, combined_frame)
             cv2.waitKey(1)
-            #await asyncio.sleep(0.03)  # 控制刷新率
+            time.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
         '''
@@ -339,7 +276,7 @@ class ConferenceClient:
         pay attention to the exception handling
         '''
 
-    async def start(self):
+    def start(self):
         """
         execute functions based on the command line input
         """
@@ -381,27 +318,21 @@ class ConferenceClient:
 
             if not recognized:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
-            await asyncio.sleep(0.1)  # 给其他任务留出时间执行
+            time.sleep(0.1)  # 给其他任务留出时间执行
 
-    def start_display_combined_thread(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.display_combined())
+    def run(self):
+        threads = [
+            threading.Thread(target=self.keep_share),
+            threading.Thread(target=self.keep_recv),
+            threading.Thread(target=self.start),
+            threading.Thread(target=self.display_combined)
+        ]
 
-    async def run(self):
-        """
-        并发运行 display_image, display_screen 和 start
-        """
-        display_thread = threading.Thread(target=self.start_display_combined_thread)
-        display_thread.start()
-        await asyncio.gather(
-            # self.display_image(),
-            # self.display_screen(),
-            # self.display_combined(),
-            self.keep_share(),
-            self.keep_recv(),
-            self.start()
-        )
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
 
     def connection_establish(self, server_ip, server_port):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -422,4 +353,4 @@ class ConferenceClient:
 if __name__ == '__main__':
     client1 = ConferenceClient()
     client1.connection_establish(SERVER_IP, MAIN_SERVER_PORT)
-    asyncio.run(client1.run())
+    client1.run()
