@@ -22,6 +22,9 @@ class ConferenceClient:
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(('', 18020))  # 绑定本地端口
+        send_buffer_size = 6553600  # 例如，将缓冲区大小设置为 65536 字节
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
         self.recv_screen_data = {}
 
@@ -137,28 +140,32 @@ class ConferenceClient:
             if not self.on_meeting:
                 time.sleep(0.03)  # 控制刷新率
                 continue
-            frame = capture_camera()
-            screen = capture_screen()
-            audio_data = streamin.read(CHUNK)
+            try:
+                frame = capture_camera()
+                screen = capture_screen()
+                audio_data = streamin.read(CHUNK)
             # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            compressed_image = compress_image(frame)
-            compressed_screen = compress_image(screen)
-            audio_tuple = (self.id, 'audio', audio_data)
-            image_tuple = (self.id, 'image', compressed_image)
-            screen_tuple = (self.id, 'screen', compressed_screen)
-            audio_tuple = pickle.dumps(audio_tuple)
-            image_tuple = pickle.dumps(image_tuple)
-            screen_tuple = pickle.dumps(screen_tuple)
-            if self.is_screen_on:
-                print("sending screen data to server")
-                self.sock.sendto(screen_tuple, self.conference_conn)
-            if self.is_camera_on:
-                print("sending camera data to server")
-                self.sock.sendto(image_tuple, self.conference_conn)
-            if self.is_audio_on:
-                print("sending audio data to server")
-                self.sock.sendto(audio_tuple, self.conference_conn)
-            print("keep sharing data")
+                compressed_image = compress_image(frame)
+                compressed_screen = compress_image(screen)
+                audio_tuple = (self.id, 'audio', audio_data)
+                image_tuple = (self.id, 'image', compressed_image)
+                screen_tuple = (self.id, 'screen', compressed_screen)
+                audio_tuple = pickle.dumps(audio_tuple)
+                image_tuple = pickle.dumps(image_tuple)
+                screen_tuple = pickle.dumps(screen_tuple)
+                if self.is_screen_on:
+                    print("sending screen data to server")
+                    self.sock.sendto(screen_tuple, self.conference_conn)
+                if self.is_camera_on:
+                    print("sending camera data to server")
+                    self.sock.sendto(image_tuple, self.conference_conn)
+                if self.is_audio_on:
+                    print("sending audio data to server")
+                    self.sock.sendto(audio_tuple, self.conference_conn)
+                print("keep sharing data")
+            except (socket.error, OSError) as e:
+                print(f"Socket error: {e}")
+
             time.sleep(0.03)  # 控制刷新率
 
     def share_switch(self, data_type):
@@ -187,21 +194,21 @@ class ConferenceClient:
     def keep_recv(self):
         while True:
             try:
-                data, addr = self.sock.recvfrom(65535)
+                data, addr = self.sock.recvfrom(6553500)
                 received_tuple = pickle.loads(data)
                 print(f"received data from {addr}: {len(data)} bytes")
                 id = received_tuple[0]
                 type_ = received_tuple[1]
                 if type_ == 'image':
                     image = decompress_image(received_tuple[2])
-                    frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                    self.store_image(id, frame)
+                    # frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                    self.store_image(id, image)
                 elif type_ == 'audio':
                     audio_data = received_tuple[2]
                     self.play_audio(audio_data)
                 elif type_ == 'screen':
                     screen = decompress_image(received_tuple[2])
-                    screen = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
+                    # screen = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
                     self.store_screen(id, screen)
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
@@ -248,7 +255,7 @@ class ConferenceClient:
             # frames2.append(self.recv_screen_data[0])
             # combined_image = overlay_camera_images(self.recv_screen_data[0], frames1)
             for i in range(len(frames2)):
-                combined_image = overlay_camera_images(frames2[i], frames1)
+                combined_image = overlay_camera_images(frames2[0], frames1)
                 cv2.imshow(str(i), np.array(combined_image))
 
             # for client_id, data in self.recv_video_data.items():
