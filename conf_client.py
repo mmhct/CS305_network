@@ -1,9 +1,11 @@
+from datetime import datetime
 import threading
 import pickle
 import socket
 import time
 
 from util import *
+
 
 class ConferenceClient:
     def __init__(self):
@@ -15,14 +17,14 @@ class ConferenceClient:
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.conns = None  # you may need to maintain multiple conns for a single conference
-        self.support_data_types = ['screen', 'camera', 'audio']  # for some types of data
+        self.support_data_types = ['screen', 'camera', 'audio', 'text']  # for some types of data
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('', 18020))  # 绑定本地端口
+        # self.sock.bind(('', 18020))  # 绑定本地端口
         send_buffer_size = 6553600  # 例如，将缓冲区大小设置为 65536 字节
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
@@ -144,7 +146,7 @@ class ConferenceClient:
                 frame = capture_camera()
                 screen = capture_screen()
                 audio_data = streamin.read(CHUNK)
-            # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 compressed_image = compress_image(frame)
                 compressed_screen = compress_image(screen)
                 audio_tuple = (self.id, 'audio', audio_data)
@@ -210,6 +212,9 @@ class ConferenceClient:
                     screen = decompress_image(received_tuple[2])
                     # screen = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
                     self.store_screen(id, screen)
+                elif type_ == 'text':
+                    text = received_tuple[2]
+                    print(text)
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
@@ -262,7 +267,7 @@ class ConferenceClient:
             #     frames.append(data)
             # for client_id, data in self.recv_screen_data.items():
             #     frames.append(data)
-            #frames.append(self.recv_screen_data[0])
+            # frames.append(self.recv_screen_data[0])
             # self.recv_video_data.clear()
             # self.recv_screen_data.clear()
             # combined_frame = np.hstack(frames)
@@ -296,6 +301,15 @@ class ConferenceClient:
             recognized = True
             cmd_input = input(f'({status}) Please enter a operation (enter "?" to help): ').strip().lower()
             fields = cmd_input.split(maxsplit=1)
+
+            if fields[0] == 'text':
+                text = fields[1]
+                text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                text_tuple = (self.id, 'text', text)
+                text_tuple = pickle.dumps(text_tuple)
+                print("sending text data to server")
+                self.sock.sendto(text_tuple, self.conference_conn)
+
             if len(fields) == 1:
                 if cmd_input in ('?', '？'):
                     print(HELP)
@@ -351,6 +365,8 @@ class ConferenceClient:
 
             self.id = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的id
             print(f"分配到的客户端id:{self.id}")
+
+            self.sock.bind(("", 20000 + self.id * 2))
 
         except ConnectionError as e:
             print(f"连接失败: {e}")
