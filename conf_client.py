@@ -1,11 +1,11 @@
-from datetime import datetime
+
 import threading
 import pickle
 import socket
 import time
+from datetime import datetime
 
 from util import *
-
 
 class ConferenceClient:
     def __init__(self):
@@ -112,8 +112,43 @@ class ConferenceClient:
         """
         quit your on-going conference
         """
-        cmd = "quit"
-        self.tcp_conn.sendall(pickle.dumps(cmd))
+        if not self.on_meeting:
+            print("You are not currently in any conference.")
+            return
+
+        cmd = f"quit {self.id} {self.conference_id}"
+        try:
+            # 发送退出会议的命令到主服务器
+            self.tcp_conn.sendall(pickle.dumps(cmd))
+            data = pickle.loads(self.tcp_conn.recv(1024))
+            print("字典:", data)
+
+            if isinstance(data, dict) and data["status"] == "success":
+                # 关闭与会议服务器的UDP连接
+                if self.conference_conn:
+                    text = f"{NAME} quit"
+                    text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                    text_tuple = (self.id, 'text', text)
+                    text_tuple = pickle.dumps(text_tuple)
+                    self.sock.sendto(text_tuple, self.conference_conn)
+                    self.conference_conn = None
+
+                # 更新客户端状态
+                print(f"已成功退出会议 {self.conference_id}")
+                self.on_meeting = False
+                self.conference_id = None
+                self.conference_ip = None
+                self.conference_port = None
+
+                self.is_screen_on = False
+                self.is_camera_on = False
+                self.is_audio_on = False
+                self.conference_conn = None
+
+            else:
+                print("Quit failed:", data)
+        except Exception as e:
+            print(f"Quit failed: {e}")
 
     def cancel_conference(self):
         """
@@ -122,7 +157,7 @@ class ConferenceClient:
         if not self.on_meeting:
             print("You are not currently in any conference.")
         else:
-            cmd = f"cancel {self.conference_id}"
+            cmd = "cancel"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
@@ -130,16 +165,27 @@ class ConferenceClient:
             try:
                 status = data["status"]
                 if status == "success":
+                    if self.conference_conn:
+                        text = f"{NAME} quit"
+                        text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                        text_tuple = (self.id, 'text', text)
+                        text_tuple = pickle.dumps(text_tuple)
+                        self.sock.sendto(text_tuple, self.conference_conn)
+                        self.conference_conn = None
+
                     print(f"Conference {self.conference_id} has been successfully cancelled.")
                     # 重置会议相关状态
+                    self.on_meeting = False
                     self.conference_id = None
                     self.conference_ip = None
                     self.conference_port = None
-                    self.on_meeting = False
-                    self.tcp_conn = None
+
+                    self.is_screen_on = False
+                    self.is_camera_on = False
+                    self.is_audio_on = False
                     self.conference_conn = None
                 else:
-                    print(f"Failed to cancel the conference: {data.get('message', 'No additional message provided')}")
+                    print(f"Failed to cancel the conference: {data}")
             except TypeError as e:  # 如果返回的不是字典
                 print(f"Received invalid data from server: {e}")
             except Exception as e:
@@ -227,6 +273,16 @@ class ConferenceClient:
                 elif type_ == 'text':
                     text = received_tuple[2]
                     print(text)
+                elif type_ == 'exit':
+                    self.on_meeting = False
+                    self.conference_id = None
+                    self.conference_ip = None
+                    self.conference_port = None
+
+                    self.is_screen_on = False
+                    self.is_camera_on = False
+                    self.is_audio_on = False
+                    self.conference_conn = None
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
