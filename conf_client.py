@@ -29,6 +29,8 @@ class ConferenceClient:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
         self.recv_screen_data = {}
+        self.others = []  # you may need to save other clients' info in conference, save id
+
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -315,26 +317,31 @@ class ConferenceClient:
         """
         显示图像和屏幕数据
         """
+        self.others.append(0)
+        self.others.append(1)
         while True:
-            frames1 = []
-            frames2 = []
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
-            # self.recv_video_data[1] = capture_camera()
-            # self.recv_screen_data[1] = capture_screen()
+            self.recv_video_data[1] = capture_camera()
+            self.recv_screen_data[1] = capture_screen()
 
-            for client_id, data in self.recv_video_data.items():
-                frames1.append(data)
-            for client_id, data in self.recv_screen_data.items():
-                frames2.append(data)
-            # frames1.append(self.recv_video_data[0])
-            # frames2.append(self.recv_screen_data[0])
-            # frames1.append(self.recv_video_data[0])
-            # frames2.append(self.recv_screen_data[0])
-            # combined_image = overlay_camera_images(self.recv_screen_data[0], frames1)
-            for i in range(len(frames2)):
-                combined_image = overlay_camera_images(frames2[0], frames1)
-                cv2.imshow(str(i), np.array(combined_image))
+
+            for client_id in self.others:
+                if client_id in self.recv_video_data and client_id in self.recv_screen_data:
+                    cv2.imshow(str(client_id), np.array(overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
+                    cv2.waitKey(1)
+                elif client_id in self.recv_video_data:
+                    cv2.imshow(str(client_id), self.recv_video_data[client_id])
+                    cv2.waitKey(1)
+                elif client_id in self.recv_screen_data:
+                    cv2.imshow(str(client_id), self.recv_screen_data[client_id])
+                    cv2.waitKey(1)
+
+            # for client_id in frames2:
+            #     cv2.imshow(str(client_id), np.array(overlay_camera_images(frames2[client_id],None)))
+                # if client_id in self.recv_screen_data and client_id in frames1:
+                #     combined_image = overlay_camera_images(frames2[client_id], frames1[client_id])
+                # cv2.imshow(str(i), np.array(combined_image))
 
             # for client_id, data in self.recv_video_data.items():
             #     frames.append(data)
@@ -345,7 +352,7 @@ class ConferenceClient:
             # self.recv_screen_data.clear()
             # combined_frame = np.hstack(frames)
             # cv2.imshow(, combined_frame)
-            cv2.waitKey(1)
+            #cv2.waitKey(1)
             time.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
