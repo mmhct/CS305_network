@@ -17,6 +17,7 @@ class ConferenceClient:
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.tcp_conn = None  # you may need to maintain multiple conns for a single conference
+        self.tcp_conn_listen = None # listen struction from Conference Server
         self.support_data_types = ['screen', 'camera', 'audio', 'text']  # for some types of data
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
@@ -32,6 +33,7 @@ class ConferenceClient:
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
+        self.others = [] # 保存除自己外在会议室其他成员id
 
     def create_conference(self):
         """
