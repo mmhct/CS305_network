@@ -20,6 +20,7 @@ class ConferenceServer:
         self.clients_info = {}  # 实际上应该是一个字典，key包含client_id;value包含UDP的ip,port
         self.mode = 'Client-Server'  # or 'P2P' if you want to support peer-to-peer conference mode
         self.serverSocket = socket(AF_INET, SOCK_DGRAM)
+        self.MainServer = None
 
     def cancel_conference(self):
         self.running = False
@@ -70,8 +71,8 @@ class ConferenceServer:
         finally:
             # 关闭套接字
             data = pickle.dumps(('', 'exit', ''))
-            for client in self.clients_info.values():
-                self.serverSocket.sendto(data, client)
+            for client in self.clients_info.keys():
+                self.MainServer.client_socket[client].send(data)
             self.clients_info.clear()
             self.serverSocket.close()
             print(f"Conference server {self.conference_id} socket closed.")
@@ -83,6 +84,7 @@ class MainServer:
         self.server_ip = server_ip
         self.server_port = main_port
         self.main_server = None
+        self.client_socket = {}
 
         self.conference_conns = None
         self.conference_servers = {}  # self.conference_servers[conference_id] = ConferenceManager
@@ -102,6 +104,7 @@ class MainServer:
         conference_server.conference_port = conference_port
         conference_server.owner_ip = addr[0]
         conference_server.owner_port = addr[1]
+        conference_server.MainServer = self
         self.conference_servers[conference_id] = conference_server
         threading.Thread(target=conference_server.start).start()
         print({"status": "success", "conference_id": conference_id,
@@ -245,6 +248,7 @@ class MainServer:
                 # 在建立TCP连接时，给客户端分配不重复的id
                 self.max_client_id += 1
                 serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
+                self.client_socket[self.max_client_id] = connectionSocket
                 connectionSocket.send(serialized_id)
             except (OSError, pickle.PickleError) as e:
                 print(f"[Error] Sending client ID to {addr} failed: {e}")
