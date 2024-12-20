@@ -428,13 +428,23 @@ class ConferenceClient:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
             time.sleep(0.1)  # 给其他任务留出时间执行
 
-    # def keep_receive_text(self):
-    #     while True:
-    #         if not self.on_meeting:
-    #             time.sleep(0.03)  # 控制刷新率
-    #             continue
-    #         try:
-    #             _, _, _= pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+    def keep_receive_text(self):
+        while True:
+            if not self.on_meeting:
+                time.sleep(0.03)  # 控制刷新率
+                continue
+            try:
+                _, type_, _= pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+                if type_ == 'text':
+                    text = pickle.loads(self.tcp_conn.recv(1024))
+                    print(text)
+                elif type_ == 'switch':
+                    #todo: maintain set others
+                    pass
+
+            except (socket.error, OSError) as e:
+                print(f"Socket error: {e}")
+                break
 
 
     def run(self):
@@ -442,7 +452,8 @@ class ConferenceClient:
             threading.Thread(target=self.keep_share),
             threading.Thread(target=self.keep_recv),
             threading.Thread(target=self.start),
-            threading.Thread(target=self.display_combined)
+            threading.Thread(target=self.display_combined),
+            threading.Thread(target=self.keep_receive_text)
         ]
 
         for thread in threads:
