@@ -67,8 +67,6 @@ class ConferenceClient:
                         # text_tuple = pickle.dumps(text_tuple)
                         # self.sock.sendto(text_tuple, self.conference_conn)
 
-                        self.tcp_conn.sendall(pickle)
-
             except ConnectionError as e:
                 print(f"连接失败: {e}")
                 self.conference_conn = None
