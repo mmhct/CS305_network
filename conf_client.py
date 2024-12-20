@@ -430,13 +430,15 @@ class ConferenceClient:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
             time.sleep(0.1)  # 给其他任务留出时间执行
 
-    def keep_receive_text(self):
+    def keep_receive_instruction(self):
         while True:
             if not self.on_meeting:
                 time.sleep(0.03)  # 控制刷新率
                 continue
             try:
-                _, type_, _= pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+                data = pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+                print(f"Received data: {data}")  # 调试信息
+                other_id, type_, text = data
                 if type_ == 'text':
                     text = pickle.loads(self.tcp_conn.recv(1024))
                     print(text)

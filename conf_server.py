@@ -195,7 +195,10 @@ class MainServer:
             for other_client_id, addr in conference_server.clients_info.items():
                 if other_client_id != client_id:
                     try:
-                        self.client_socket[other_client_id].send(pickle.dumps(message))
+                        temp = (client_id, 'switch', message)
+                        print(f"temp:{temp}")
+                        data = pickle.dumps(temp)
+                        self.tcp_conns_to_clients[other_client_id].send(data)
                         print(f"Forwarded switch message to client {other_client_id}")
                     except Exception as e:
                         print(f"Failed to forward switch message to client {other_client_id}: {e}")
