@@ -22,6 +22,7 @@ class ConferenceClient:
         self.conference_ip = None  # *主服务器提供*
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
+        self.rtp_conn = None  # 用于接收数据的rtp套接字
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # self.sock.bind(('', 18020))  # 绑定本地端口
