@@ -33,7 +33,7 @@ class ConferenceClient:
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
-        self.others = []  # 除自己以外所有在会议室的人的id
+        self.others = [] # 保存除自己外在会议室其他成员id
 
     def create_conference(self):
         """
@@ -44,8 +44,7 @@ class ConferenceClient:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
         else:
-            udp_ip, udp_port = self.sock.getsockname()
-            cmd = f"create {self.id} {udp_ip} {udp_port}"
+            cmd = "create"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
@@ -61,13 +60,11 @@ class ConferenceClient:
                         self.conference_conn = (self.conference_ip, int(self.conference_port))
                         print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
-                        # text = f"{NAME} comes in"
-                        # text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
-                        # text_tuple = (self.id, 'text', text)
-                        # text_tuple = pickle.dumps(text_tuple)
-                        # self.sock.sendto(text_tuple, self.conference_conn)
-
-                        self.tcp_conn.sendall(pickle)
+                        text = f"{NAME} comes in"
+                        text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                        text_tuple = (self.id, 'text', text)
+                        text_tuple = pickle.dumps(text_tuple)
+                        self.sock.sendto(text_tuple, self.conference_conn)
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -85,8 +82,7 @@ class ConferenceClient:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
         else:
-            udp_ip, udp_port = self.sock.getsockname()
-            cmd = f"join {self.id} {conference_id} {udp_ip} {udp_port}"
+            cmd = f"join {conference_id}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
@@ -102,11 +98,11 @@ class ConferenceClient:
                         self.conference_conn = (self.conference_ip, int(self.conference_port))
                         print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
-                        # text = f"{NAME} comes in"
-                        # text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
-                        # text_tuple = (self.id, 'text', text)
-                        # text_tuple = pickle.dumps(text_tuple)
-                        # self.sock.sendto(text_tuple, self.conference_conn)
+                        text = f"{NAME} comes in"
+                        text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                        text_tuple = (self.id, 'text', text)
+                        text_tuple = pickle.dumps(text_tuple)
+                        self.sock.sendto(text_tuple, self.conference_conn)
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -214,7 +210,8 @@ class ConferenceClient:
                 audio_data = streamin.read(CHUNK)
                 # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 compressed_image = compress_image(frame)
-                compressed_screen = compress_image(screen)
+                #compressed_screen = compress_image(image=screen, quality=0)
+                compressed_screen = compress_image(screen.resize((640, 480), Image.LANCZOS))
                 audio_tuple = (self.id, 'audio', audio_data)
                 image_tuple = (self.id, 'image', compressed_image)
                 screen_tuple = (self.id, 'screen', compressed_screen)
@@ -245,18 +242,24 @@ class ConferenceClient:
             if self.is_screen_on:
                 print("switch screen on")
             else:
+                cmd = f'switch screen off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch screen off")
         if data_type == 'camera':
             self.is_camera_on = not self.is_camera_on
             if self.is_camera_on:
                 print("switch camera on")
             else:
+                cmd = f'switch camera off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch camera off")
         if data_type == 'audio':
             self.is_audio_on = not self.is_audio_on
             if self.is_audio_on:
                 print("switch audio on")
             else:
+                cmd = f'switch audio off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch audio off")
 
     def keep_recv(self):
@@ -322,7 +325,7 @@ class ConferenceClient:
         显示图像和屏幕数据
         """
         self.others.append(0)
-        # self.others.append(1)
+        self.others.append(1)
         while True:
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
@@ -335,10 +338,10 @@ class ConferenceClient:
                         overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
                     cv2.waitKey(1)
                 elif client_id in self.recv_video_data:
-                    cv2.imshow(str(client_id), self.recv_video_data[client_id])
+                    cv2.imshow(str(client_id), np.array(self.recv_video_data[client_id]))
                     cv2.waitKey(1)
                 elif client_id in self.recv_screen_data:
-                    cv2.imshow(str(client_id), self.recv_screen_data[client_id])
+                    cv2.imshow(str(client_id), np.array(self.recv_screen_data[client_id].resize((1920, 1080), Image.LANCZOS)))
                     cv2.waitKey(1)
 
             # for client_id in frames2:
@@ -424,6 +427,15 @@ class ConferenceClient:
             if not recognized:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
             time.sleep(0.1)  # 给其他任务留出时间执行
+
+    # def keep_receive_text(self):
+    #     while True:
+    #         if not self.on_meeting:
+    #             time.sleep(0.03)  # 控制刷新率
+    #             continue
+    #         try:
+    #             _, _, _= pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+
 
     def run(self):
         threads = [
