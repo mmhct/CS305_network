@@ -320,12 +320,12 @@ class ConferenceClient:
         显示图像和屏幕数据
         """
         self.others.append(0)
-        self.others.append(1)
+        # self.others.append(1)
         while True:
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
-            self.recv_video_data[1] = capture_camera()
-            self.recv_screen_data[1] = capture_screen()
+            # self.recv_video_data[1] = capture_camera()
+            # self.recv_screen_data[1] = capture_screen()
 
 
             for client_id in self.others:
