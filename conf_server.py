@@ -182,7 +182,22 @@ class MainServer:
         """
         switch conference: tell other clients to maintain others list
         """
-        pass
+        client_id = int(message.split(' ')[3])
+        conference_id = int(message.split(' ')[4])
+
+        if conference_id in self.conference_servers:
+            conference_server = self.conference_servers[conference_id]
+            for other_client_id, addr in conference_server.clients_info.items():
+                if other_client_id != client_id:
+                    try:
+                        self.client_socket[other_client_id].send(pickle.dumps(message))
+                        print(f"Forwarded switch message to client {other_client_id}")
+                    except Exception as e:
+                        print(f"Failed to forward switch message to client {other_client_id}: {e}")
+            return {"status": "success"}
+        else:
+            return {"status": "error", "message": "Conference not found"}
+        
 
     def request_handler(self, addr, message):
         """

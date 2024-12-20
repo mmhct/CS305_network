@@ -440,6 +440,7 @@ class ConferenceClient:
                     print(text)
                 elif type_ == 'switch':
                     #todo: maintain set others
+                    print("switch")
                     pass
 
             except (socket.error, OSError) as e:
