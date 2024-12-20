@@ -1,4 +1,3 @@
-
 import threading
 import pickle
 import socket
@@ -6,6 +5,7 @@ import time
 from datetime import datetime
 
 from util import *
+
 
 class ConferenceClient:
     def __init__(self):
@@ -22,7 +22,6 @@ class ConferenceClient:
         self.conference_ip = None  # *主服务器提供*
         self.conference_port = None  # 这个负责会议室接收数据，也就是说client往这里发送数据。*主服务器提供*
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
-        self.rtp_conn = None  # 用于接收数据的rtp套接字
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # self.sock.bind(('', 18020))  # 绑定本地端口
@@ -31,7 +30,6 @@ class ConferenceClient:
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
         self.recv_screen_data = {}
         self.others = []  # you may need to save other clients' info in conference, save id
-
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -212,7 +210,8 @@ class ConferenceClient:
                 audio_data = streamin.read(CHUNK)
                 # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 compressed_image = compress_image(frame)
-                compressed_screen = compress_image(screen)
+                #compressed_screen = compress_image(image=screen, quality=0)
+                compressed_screen = compress_image(screen.resize((640, 480), Image.LANCZOS))
                 audio_tuple = (self.id, 'audio', audio_data)
                 image_tuple = (self.id, 'image', compressed_image)
                 screen_tuple = (self.id, 'screen', compressed_screen)
@@ -326,30 +325,30 @@ class ConferenceClient:
         显示图像和屏幕数据
         """
         self.others.append(0)
-        # self.others.append(1)
+        self.others.append(1)
         while True:
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
             # self.recv_video_data[1] = capture_camera()
             # self.recv_screen_data[1] = capture_screen()
 
-
             for client_id in self.others:
                 if client_id in self.recv_video_data and client_id in self.recv_screen_data:
-                    cv2.imshow(str(client_id), np.array(overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
+                    cv2.imshow(str(client_id), np.array(
+                        overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
                     cv2.waitKey(1)
                 elif client_id in self.recv_video_data:
-                    cv2.imshow(str(client_id), self.recv_video_data[client_id])
+                    cv2.imshow(str(client_id), np.array(self.recv_video_data[client_id]))
                     cv2.waitKey(1)
                 elif client_id in self.recv_screen_data:
-                    cv2.imshow(str(client_id), self.recv_screen_data[client_id])
+                    cv2.imshow(str(client_id), np.array(self.recv_screen_data[client_id].resize((1920, 1080), Image.LANCZOS)))
                     cv2.waitKey(1)
 
             # for client_id in frames2:
             #     cv2.imshow(str(client_id), np.array(overlay_camera_images(frames2[client_id],None)))
-                # if client_id in self.recv_screen_data and client_id in frames1:
-                #     combined_image = overlay_camera_images(frames2[client_id], frames1[client_id])
-                # cv2.imshow(str(i), np.array(combined_image))
+            # if client_id in self.recv_screen_data and client_id in frames1:
+            #     combined_image = overlay_camera_images(frames2[client_id], frames1[client_id])
+            # cv2.imshow(str(i), np.array(combined_image))
 
             # for client_id, data in self.recv_video_data.items():
             #     frames.append(data)
@@ -360,7 +359,7 @@ class ConferenceClient:
             # self.recv_screen_data.clear()
             # combined_frame = np.hstack(frames)
             # cv2.imshow(, combined_frame)
-            #cv2.waitKey(1)
+            # cv2.waitKey(1)
             time.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
