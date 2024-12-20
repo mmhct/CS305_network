@@ -177,6 +177,13 @@ class MainServer:
         return {"status": "error", "conference_id": None, "conference_ip": None,
                 "conference_port": None}
 
+
+    def handle_switch_conference(self, message):
+        """
+        switch conference: tell other clients to maintain others list
+        """
+        pass
+
     def request_handler(self, addr, message):
         """
         running task: handle out-meeting (or also in-meeting) requests from clients
@@ -197,6 +204,8 @@ class MainServer:
             return self.handle_quit_conference(client_id, conference_id)
         elif message.startswith('cancel'):
             return self.handle_cancel_conference(addr)
+        elif message.startswith('switch'):
+            return self.handle_switch_conference(message)
         # invalid 指令
         else:
             return "Invalid command"

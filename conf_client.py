@@ -243,18 +243,24 @@ class ConferenceClient:
             if self.is_screen_on:
                 print("switch screen on")
             else:
+                cmd = f'switch screen off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch screen off")
         if data_type == 'camera':
             self.is_camera_on = not self.is_camera_on
             if self.is_camera_on:
                 print("switch camera on")
             else:
+                cmd = f'switch camera off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch camera off")
         if data_type == 'audio':
             self.is_audio_on = not self.is_audio_on
             if self.is_audio_on:
                 print("switch audio on")
             else:
+                cmd = f'switch audio off {self.id} {self.conference_id}'
+                self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch audio off")
 
     def keep_recv(self):
@@ -422,6 +428,15 @@ class ConferenceClient:
             if not recognized:
                 print(f'[Warn]: Unrecognized cmd_input {cmd_input}')
             time.sleep(0.1)  # 给其他任务留出时间执行
+
+    # def keep_receive_text(self):
+    #     while True:
+    #         if not self.on_meeting:
+    #             time.sleep(0.03)  # 控制刷新率
+    #             continue
+    #         try:
+    #             _, _, _= pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+
 
     def run(self):
         threads = [
