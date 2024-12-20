@@ -33,7 +33,7 @@ class ConferenceClient:
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
-        self.others = [] # 保存除自己外在会议室其他成员id
+        self.others = []  # 除自己以外所有在会议室的人的id
 
     def create_conference(self):
         """
@@ -44,7 +44,8 @@ class ConferenceClient:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
         else:
-            cmd = "create"
+            udp_ip, udp_port = self.sock.getsockname()
+            cmd = f"create {self.id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
@@ -60,11 +61,13 @@ class ConferenceClient:
                         self.conference_conn = (self.conference_ip, int(self.conference_port))
                         print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
-                        text = f"{NAME} comes in"
-                        text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
-                        text_tuple = (self.id, 'text', text)
-                        text_tuple = pickle.dumps(text_tuple)
-                        self.sock.sendto(text_tuple, self.conference_conn)
+                        # text = f"{NAME} comes in"
+                        # text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                        # text_tuple = (self.id, 'text', text)
+                        # text_tuple = pickle.dumps(text_tuple)
+                        # self.sock.sendto(text_tuple, self.conference_conn)
+
+                        self.tcp_conn.sendall(pickle)
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -82,7 +85,8 @@ class ConferenceClient:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
         else:
-            cmd = f"join {conference_id}"
+            udp_ip, udp_port = self.sock.getsockname()
+            cmd = f"join {self.id} {conference_id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("字典:", data)
@@ -98,11 +102,11 @@ class ConferenceClient:
                         self.conference_conn = (self.conference_ip, int(self.conference_port))
                         print(f"已连接到会议室{self.conference_id} ({self.conference_ip}:{self.conference_port})")
 
-                        text = f"{NAME} comes in"
-                        text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
-                        text_tuple = (self.id, 'text', text)
-                        text_tuple = pickle.dumps(text_tuple)
-                        self.sock.sendto(text_tuple, self.conference_conn)
+                        # text = f"{NAME} comes in"
+                        # text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
+                        # text_tuple = (self.id, 'text', text)
+                        # text_tuple = pickle.dumps(text_tuple)
+                        # self.sock.sendto(text_tuple, self.conference_conn)
 
             except ConnectionError as e:
                 print(f"连接失败: {e}")
@@ -325,7 +329,7 @@ class ConferenceClient:
         显示图像和屏幕数据
         """
         self.others.append(0)
-        self.others.append(1)
+        # self.others.append(1)
         while True:
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
