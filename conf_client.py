@@ -33,7 +33,7 @@ class ConferenceClient:
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
-        self.others = []  # 除自己以外所有在会议室的人的id
+        self.others = set()  # 除自己以外所有在会议室的人的id
 
     def create_conference(self):
         """
@@ -143,15 +143,7 @@ class ConferenceClient:
 
                 # 更新客户端状态
                 print(f"已成功退出会议 {self.conference_id}")
-                self.on_meeting = False
-                self.conference_id = None
-                self.conference_ip = None
-                self.conference_port = None
-
-                self.is_screen_on = False
-                self.is_camera_on = False
-                self.is_audio_on = False
-                self.conference_conn = None
+                self.reset()
 
             else:
                 print("Quit failed:", data)
@@ -183,15 +175,7 @@ class ConferenceClient:
 
                     print(f"Conference {self.conference_id} has been successfully cancelled.")
                     # 重置会议相关状态
-                    self.on_meeting = False
-                    self.conference_id = None
-                    self.conference_ip = None
-                    self.conference_port = None
-
-                    self.is_screen_on = False
-                    self.is_camera_on = False
-                    self.is_audio_on = False
-                    self.conference_conn = None
+                    self.reset()
                 else:
                     print(f"Failed to cancel the conference: {data}")
             except TypeError as e:  # 如果返回的不是字典
@@ -292,18 +276,21 @@ class ConferenceClient:
                     text = received_tuple[2]
                     print(text)
                 elif type_ == 'exit':
-                    self.on_meeting = False
-                    self.conference_id = None
-                    self.conference_ip = None
-                    self.conference_port = None
-
-                    self.is_screen_on = False
-                    self.is_camera_on = False
-                    self.is_audio_on = False
-                    self.conference_conn = None
+                    self.reset()
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
+
+    def reset(self):
+        self.on_meeting = False
+        self.conference_id = None
+        self.conference_ip = None
+        self.conference_port = None
+        self.is_screen_on = False
+        self.is_camera_on = False
+        self.is_audio_on = False
+        self.conference_conn = None
+        self.others.clear()
 
     def play_audio(self, audio_data):
         """
@@ -447,6 +434,15 @@ class ConferenceClient:
                 elif type_ == 'switch':
                     #todo: maintain set others
                     print("switch")
+                elif type_ == 'join':
+                    self.others.add(other_id)
+                    print(f"Client {other_id} joined")
+                elif type_ == 'quit':
+                    self.others.discard(other_id)
+                    print(f"Client {other_id} left")
+                elif type_ == 'exit':
+                    print(f"Conference {self.conference_id} has been canceled")
+                    self.reset()
                     pass
 
             except (socket.error, OSError) as e:
