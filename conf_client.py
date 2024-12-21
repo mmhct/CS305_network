@@ -436,9 +436,11 @@ class ConferenceClient:
                 elif type_ == 'join':
                     self.others.add(other_id)
                     print(f"Client {other_id} joined")
+                    print(self.others)
                 elif type_ == 'quit':
                     self.others.discard(other_id)
                     print(f"Client {other_id} left")
+                    print(self.others)
                 elif type_ == 'exit':
                     print(f"Conference {self.conference_id} has been canceled")
                     self.reset()
@@ -469,9 +471,9 @@ class ConferenceClient:
         try:
             client_socket.connect((server_ip, int(server_port)))
             print(f"已连接到服务器 {server_ip}:{server_port}")
-            # Establish a second TCP connection
             self.tcp_conn2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.tcp_conn2.connect((server_ip, int(server_port2)))
+            print(f"已建立第二个TCP连接到服务器 {server_ip}:{server_port2}")
             self.tcp_conn = client_socket
             self.server_addr = (server_ip, server_port)
 
@@ -484,8 +486,8 @@ class ConferenceClient:
             self.sock.bind((local_ip, 20615 + self.id * 2))
             print(f"本机UDP地址: {local_ip}:{20615 + self.id * 2}")
 
-            
-            print(f"已建立第二个TCP连接到服务器 {server_ip}:{server_port2}")
+            # Establish a second TCP connection
+
 
         except ConnectionError as e:
             print(f"连接失败: {e}")
