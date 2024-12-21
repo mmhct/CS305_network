@@ -82,7 +82,7 @@ class ConferenceClient:
         if self.on_meeting:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
-        else:
+        elif conference_id > 0:
             udp_ip, udp_port = self.sock.getsockname()
             print(f"UDP {udp_ip}:{udp_port}")
             cmd = f"join {self.id} {conference_id} {udp_ip} {udp_port}"
@@ -114,6 +114,14 @@ class ConferenceClient:
                 print(e)
             except Exception as e:
                 print(e)
+        else:
+            udp_ip, udp_port = self.sock.getsockname()
+            print(f"UDP {udp_ip}:{udp_port}")
+            cmd = "search"
+            self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
+            data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
+            print("available conference: ", data)
+            
 
     def quit_conference(self):
         """
@@ -396,6 +404,8 @@ class ConferenceClient:
                     self.quit_conference()
                 elif cmd_input == 'cancel':
                     self.cancel_conference()
+                elif cmd_input == 'join':
+                    self.join_conference(0)
                 else:
                     recognized = False
             elif len(fields) == 2:

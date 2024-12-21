@@ -213,6 +213,11 @@ class MainServer:
         else:
             return {"status": "error", "message": "Conference not found"}
         
+    def handle_search_conference(self):
+        """
+        search conference: return all the available conference
+        """
+        return " ".join(str(key) for key in self.conference_servers.keys())
 
     def request_handler(self, addr, message):
         """
@@ -241,6 +246,8 @@ class MainServer:
             return self.handle_cancel_conference(addr)
         elif message.startswith('switch'):
             return self.handle_switch_conference(message)
+        elif message.startswith('search'):
+            return self.handle_search_conference()
         # invalid 指令
         else:
             return "Invalid command"
