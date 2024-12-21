@@ -245,6 +245,15 @@ class MainServer:
         else:
             return "Invalid command"
 
+    def find_conference_and_client_by_address(self, conference_server, address):
+        for conference_id, conference in conference_server.items():
+            for client_id, client_address in conference.clients_info.items():
+                if client_address == address:
+                    return conference_id, client_id
+        return None, None  # 如果没有找到该地址，返回 None
+
+    # 测试
+
     def handle_client(self, connectionSocket, addr):
         """
         Handle the client connection in a separate thread.
@@ -262,7 +271,9 @@ class MainServer:
                 # print(f"message:{message}")
                 serialized_message = pickle.dumps(message)  # 序列化为字节流
                 connectionSocket.send(serialized_message)
-        except (OSError, pickle.PickleError) as e:  
+        except (OSError, pickle.PickleError) as e:
+            client_id, client_address = self.find_conference_and_client_by_address(self.conference_servers, addr)
+            self.handle_quit_conference(client_id, client_address)
             print(f"[Error] Handling client {addr} failed: {e}")
             
         finally:
