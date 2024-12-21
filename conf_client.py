@@ -315,7 +315,7 @@ class ConferenceClient:
         """
         显示图像和屏幕数据
         """
-        self.others.append(0)
+        self.others.add(0)
         # self.others.append(1)
         while True:
             self.recv_video_data[0] = capture_camera()
@@ -470,6 +470,9 @@ class ConferenceClient:
         try:
             client_socket.connect((server_ip, int(server_port)))
             print(f"已连接到服务器 {server_ip}:{server_port}")
+            # Establish a second TCP connection
+            self.tcp_conn2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.tcp_conn2.connect((server_ip, int(server_port2)))
             self.tcp_conn = client_socket
             self.server_addr = (server_ip, server_port)
 
@@ -482,9 +485,7 @@ class ConferenceClient:
             self.sock.bind((local_ip, 20615 + self.id * 2))
             print(f"本机UDP地址: {local_ip}:{20615 + self.id * 2}")
 
-            # Establish a second TCP connection
-            self.tcp_conn2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.tcp_conn2.connect((server_ip, int(server_port2)))
+            
             print(f"已建立第二个TCP连接到服务器 {server_ip}:{server_port2}")
 
         except ConnectionError as e:

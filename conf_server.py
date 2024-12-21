@@ -289,6 +289,7 @@ class MainServer:
                 connectionSocket, addr = serverSocket.accept()
                 print(f"接受到来自 {addr} 的连接请求")
                 connectionSocket2, addr = serverSocket2.accept()
+                print('292')
             except OSError as e:
                 print(f"[Error] Accepting connection failed: {e}")
                 continue
@@ -296,8 +297,10 @@ class MainServer:
             try:
                 # 在建立TCP连接时，给客户端分配不重复的id
                 self.max_client_id += 1
+                print('300')
                 serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
                 connectionSocket.send(serialized_id)
+                print('303')
                 self.tcp_conns_to_clients[self.max_client_id] = connectionSocket
                 self.tcp_conns_to_clients2[self.max_client_id] = connectionSocket2
             except (OSError, pickle.PickleError) as e:
