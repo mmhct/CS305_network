@@ -321,8 +321,8 @@ class ConferenceClient:
             self.recv_screen_data[0] = capture_screen()
             # self.recv_video_data[1] = capture_camera()
             # self.recv_screen_data[1] = capture_screen()
-
-            for client_id in self.others:
+            others_copy = self.others.copy()
+            for client_id in self.others_copy:
                 if client_id in self.recv_video_data and client_id in self.recv_screen_data:
                     cv2.imshow(str(client_id), np.array(
                         overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
