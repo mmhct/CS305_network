@@ -164,7 +164,7 @@ class MainServer:
                 for client in self.conference_servers[conference_id].clients_info:
                     self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "quit", f"client {client_id} has quit conference")))
                 if len(self.conference_servers[conference_id].clients_info) == 0:
-                    # 如果所有者离开，自动取消会议
+                    # 如果所有人离开会议，自动取消会议
                     self.conference_servers[conference_id].cancel_conference()
                     del self.conference_servers[conference_id]
                 return {"status": "success", "conference_id": None,
