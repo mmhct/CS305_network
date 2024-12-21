@@ -45,6 +45,7 @@ class ConferenceClient:
                   f"({self.conference_ip}:{self.conference_port})")
         else:
             udp_ip, udp_port = self.sock.getsockname()
+            print(f"UDP {udp_ip}:{udp_port}")
             cmd = f"create {self.id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
@@ -84,6 +85,7 @@ class ConferenceClient:
                   f"({self.conference_ip}:{self.conference_port})")
         else:
             udp_ip, udp_port = self.sock.getsockname()
+            print(f"UDP {udp_ip}:{udp_port}")
             cmd = f"join {self.id} {conference_id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
@@ -478,7 +480,11 @@ class ConferenceClient:
             self.id = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的id
             print(f"分配到的客户端id:{self.id}")
 
-            self.sock.bind(("", 20615 + self.id * 2))
+            # 获取本机 IP 地址,绑定UDP套接字
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            self.sock.bind((local_ip, 20615 + self.id * 2))
+            print(f"本机UDP地址: {local_ip}:{20615 + self.id * 2}")
 
             # Establish a second TCP connection
             self.tcp_conn2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
