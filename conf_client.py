@@ -25,7 +25,6 @@ class ConferenceClient:
         self.conference_conn = None  # 利用上面这两个创建一个udp套接字，然后放在这里，之后往会议室传数据都用这个。*客户端自己生成*
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self.sock.bind(('', 18020))  # 绑定本地端口
         send_buffer_size = 6553600  # 例如，将缓冲区大小设置为 65536 字节
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference

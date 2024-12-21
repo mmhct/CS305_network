@@ -134,8 +134,8 @@ class MainServer:
         if conference_id in self.conference_servers:
             conference_server = self.conference_servers[conference_id]
             for client in conference_server.clients_info:
-                self.tcp_conns_to_clients2[client].send((client_id, "join", f"Client {client_id} comes in."))
-                self.tcp_conns_to_clients2[client_id].send((client, "join", f"Client {client} exists."))
+                self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
+                self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")
@@ -162,7 +162,7 @@ class MainServer:
                 del self.conference_servers[conference_id].clients_info[client_id]
                 print(f'Client {client_id} has quit conference{conference_id}')
                 for client in self.conference_servers[conference_id].clients_info:
-                    self.tcp_conns_to_clients2[client].send((client_id, "quit", f"client {client_id} has quit conference"))
+                    self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "quit", f"client {client_id} has quit conference")))
                 if len(self.conference_servers[conference_id].clients_info) == 0:
                     # 如果所有者离开，自动取消会议
                     self.conference_servers[conference_id].cancel_conference()
@@ -262,6 +262,9 @@ class MainServer:
                 # print(f"message:{message}")
                 serialized_message = pickle.dumps(message)  # 序列化为字节流
                 connectionSocket.send(serialized_message)
+        except (OSError, pickle.PickleError) as e:  
+            print(f"[Error] Handling client {addr} failed: {e}")
+            
         finally:
             connectionSocket.close()
             print(f"{addr} Client disconnected")
