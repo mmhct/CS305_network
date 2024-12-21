@@ -72,7 +72,7 @@ class ConferenceServer:
             # 关闭套接字
             data = pickle.dumps(('', 'exit', ''))
             for client in self.clients_info.keys():
-                self.MainServer.client_socket[client].send(data)
+                self.MainServer.tcp_conns_to_clients[client].send(data)
             self.clients_info.clear()
             self.serverSocket.close()
             print(f"Conference server {self.conference_id} socket closed.")
@@ -84,7 +84,6 @@ class MainServer:
         self.server_ip = server_ip
         self.server_port = main_port
         self.main_server = None
-        self.client_socket = {}
 
         self.conference_conns = None
         self.conference_servers = {}  # self.conference_servers[conference_id] = ConferenceManager
@@ -134,6 +133,7 @@ class MainServer:
             conference_server = self.conference_servers[conference_id]
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
+            print(f"client info {conference_server.clients_info}")
             # Perform operations on the existing conference_server thread
             # For example, you can call a method on the conference_server
             # conference_server.join_conference()  # 这个要定义
@@ -285,7 +285,6 @@ class MainServer:
                 # 在建立TCP连接时，给客户端分配不重复的id
                 self.max_client_id += 1
                 serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
-                self.client_socket[self.max_client_id] = connectionSocket
                 connectionSocket.send(serialized_id)
                 self.tcp_conns_to_clients[self.max_client_id] = connectionSocket
             except (OSError, pickle.PickleError) as e:

@@ -29,7 +29,6 @@ class ConferenceClient:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
         self.recv_screen_data = {}
-        self.others = []  # you may need to save other clients' info in conference, save id
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
