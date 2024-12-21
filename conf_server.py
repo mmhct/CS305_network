@@ -134,6 +134,10 @@ class MainServer:
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")
+            # TODO: send existing clients in conference to new client, send new client to other existing client
+            for client in conference_server.clients_info:
+                self.tcp_conns_to_clients[client].send((client_id, "join", f"Client {client_id} comes in."))
+                self.tcp_conns_to_clients[client_id].send((client, "join", f"Client {client} exists."))
             # Perform operations on the existing conference_server thread
             # For example, you can call a method on the conference_server
             # conference_server.join_conference()  # 这个要定义
@@ -156,6 +160,8 @@ class MainServer:
             if client_id in self.conference_servers[conference_id].clients_info:
                 del self.conference_servers[conference_id].clients_info[client_id]
                 print(f'Client {client_id} has quit conference{conference_id}')
+                for client in self.conference_servers[conference_id].clients_info:
+                    self.tcp_conns_to_clients[client].send((client_id, "quit", f"client {client_id} has quit conference"))
                 if len(self.conference_servers[conference_id].clients_info) == 0:
                     # 如果所有者离开，自动取消会议
                     self.conference_servers[conference_id].cancel_conference()
