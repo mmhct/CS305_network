@@ -43,7 +43,7 @@ class ConferenceClient:
             print(f"You have already joined the conference {self.conference_id} "
                   f"({self.conference_ip}:{self.conference_port})")
         else:
-
+            udp_ip, udp_port = self.sock.getsockname()
             print(f"UDP {udp_ip}:{udp_port}")
             cmd = f"create {self.id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
