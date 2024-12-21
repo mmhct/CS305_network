@@ -79,10 +79,11 @@ class ConferenceServer:
 
 
 class MainServer:
-    def __init__(self, server_ip, main_port):
+    def __init__(self, server_ip, main_port, main_port2):
         # async server
         self.server_ip = server_ip
         self.server_port = main_port
+        self.server_port2 = main_port2
         self.main_server = None
 
         self.conference_conns = None
@@ -90,6 +91,7 @@ class MainServer:
         self.max_conference_id = 0
         self.max_client_id = 0
         self.tcp_conns_to_clients = {}  # {client_id:发送给客户端用的tcp套接字}
+        self.tcp_conns_to_clients2 = {}  # {client_id:发送给客户端keep_receive_instruction用的tcp套接字}
 
     def handle_create_conference(self, addr, client_id, udp_ip, udp_port):
         """
@@ -198,7 +200,7 @@ class MainServer:
                         temp = (client_id, 'switch', message)
                         print(f"temp:{temp}")
                         data = pickle.dumps(temp)
-                        self.tcp_conns_to_clients[other_client_id].send(data)
+                        self.tcp_conns_to_clients2[other_client_id].send(data)
                         print(f"Forwarded switch message to client {other_client_id}")
                     except Exception as e:
                         print(f"Failed to forward switch message to client {other_client_id}: {e}")
@@ -250,7 +252,7 @@ class MainServer:
                     # print("出现空字符串")
                     break
                 sentence = pickle.loads(sentence)  # 反序列化
-                # print(f"sentence:{sentence}")
+                print(f"sentence:{sentence}")
                 message = self.request_handler(addr, sentence)
                 # print(f"message:{message}")
                 serialized_message = pickle.dumps(message)  # 序列化为字节流
@@ -268,6 +270,10 @@ class MainServer:
             serverSocket = socket(AF_INET, SOCK_STREAM)
             serverSocket.bind((self.server_ip, self.server_port))
             serverSocket.listen(100)
+
+            serverSocket2 = socket(AF_INET, SOCK_STREAM)
+            serverSocket2.bind((self.server_ip, self.server_port2))
+            serverSocket2.listen(100)
             print(f"The server{(self.server_ip, self.server_port)} is ready to receive")
         except OSError as e:
             print(f"[Error] Server initialization failed: {e}")
@@ -277,6 +283,7 @@ class MainServer:
             try:
                 connectionSocket, addr = serverSocket.accept()
                 print(f"接受到来自 {addr} 的连接请求")
+                connectionSocket2, addr = serverSocket2.accept()
             except OSError as e:
                 print(f"[Error] Accepting connection failed: {e}")
                 continue
@@ -287,6 +294,7 @@ class MainServer:
                 serialized_id = pickle.dumps(self.max_client_id)  # 序列化为字节流
                 connectionSocket.send(serialized_id)
                 self.tcp_conns_to_clients[self.max_client_id] = connectionSocket
+                self.tcp_conns_to_clients2[self.max_client_id] = connectionSocket2
             except (OSError, pickle.PickleError) as e:
                 print(f"[Error] Sending client ID to {addr} failed: {e}")
                 connectionSocket.close()
@@ -301,5 +309,5 @@ class MainServer:
 
 
 if __name__ == '__main__':
-    server = MainServer(SERVER_IP, MAIN_SERVER_PORT)
+    server = MainServer(SERVER_IP, MAIN_SERVER_PORT, MAIN_SERVER_PORT2)
     server.start()

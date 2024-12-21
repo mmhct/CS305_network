@@ -17,6 +17,7 @@ class ConferenceClient:
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.tcp_conn = None  # you may need to maintain multiple conns for a single conference
+        self.tcp_conn2 = None # 负责接收指令的tcp连接
         self.support_data_types = ['screen', 'camera', 'audio', 'text']  # for some types of data
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
@@ -435,11 +436,11 @@ class ConferenceClient:
                 time.sleep(0.03)  # 控制刷新率
                 continue
             try:
-                data = pickle.loads(self.tcp_conn.recv(1024)) #id,  'text', text
+                data = pickle.loads(self.tcp_conn2.recv(1024)) #id,  'text', text
                 print(f"Received data: {data}")  # 调试信息
                 other_id, type_, text = data
                 if type_ == 'text':
-                    text = pickle.loads(self.tcp_conn.recv(1024))
+                    # text = pickle.loads(self.tcp_conn2.recv(1024))
                     print(text)
                 elif type_ == 'switch':
                     #todo: maintain set others
@@ -457,7 +458,7 @@ class ConferenceClient:
             threading.Thread(target=self.keep_recv),
             threading.Thread(target=self.start),
             threading.Thread(target=self.display_combined),
-            threading.Thread(target=self.keep_receive_text)
+            threading.Thread(target=self.keep_receive_instruction)
         ]
 
         for thread in threads:
@@ -466,7 +467,7 @@ class ConferenceClient:
         for thread in threads:
             thread.join()
 
-    def connection_establish(self, server_ip, server_port):
+    def connection_establish(self, server_ip, server_port, server_port2):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             client_socket.connect((server_ip, int(server_port)))
@@ -479,12 +480,18 @@ class ConferenceClient:
 
             self.sock.bind(("", 20615 + self.id * 2))
 
+            # Establish a second TCP connection
+            self.tcp_conn2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.tcp_conn2.connect((server_ip, int(server_port2)))
+            print(f"已建立第二个TCP连接到服务器 {server_ip}:{server_port2}")
+
         except ConnectionError as e:
             print(f"连接失败: {e}")
             self.tcp_conn = None
+            self.tcp_conn2 = None
 
 
 if __name__ == '__main__':
     client1 = ConferenceClient()
-    client1.connection_establish(SERVER_IP, MAIN_SERVER_PORT)
+    client1.connection_establish(SERVER_IP, MAIN_SERVER_PORT, MAIN_SERVER_PORT2)
     client1.run()
