@@ -17,9 +17,10 @@ class ConferenceServer:
         self.data_types = ['screen', 'camera', 'audio', 'text']  # example data types in a video conference
         self.owner_ip = None  # the client who create the conference
         self.owner_port = None  # the port for the owner client
-        self.clients_info = {}  # 实际上应该是一个字典，key包含client_id;value包含UDP的ip,port
+        self.clients_info = {}  # 实际上应该是一个字典，key包含client_id;value包含UDP的(ip,camera_port,screen_port,audio_port)
         self.mode = 'Client-Server'  # or 'P2P' if you want to support peer-to-peer conference mode
         self.serverSocket = socket(AF_INET, SOCK_DGRAM)
+        self.serverSockets = {}  # {client_id:(camera_socket, screen_socket, audio_socket)}
         self.MainServer = None
 
     def cancel_conference(self):
@@ -30,6 +31,63 @@ class ConferenceServer:
         # self.owner_ip = None
         # self.owner_port = None
 
+    def create_udp(self, id):
+        '''
+        创建UDP套接字
+        '''
+        socket_camera = socket(AF_INET, SOCK_DGRAM)
+        socket_camera.bind((self.conference_ip, self.conference_port))
+        self.conference_port += 1
+        socket_screen = socket(AF_INET, SOCK_DGRAM)
+        socket_screen.bind((self.conference_ip, self.conference_port))
+        self.conference_port += 1
+        socket_audio = socket(AF_INET, SOCK_DGRAM)
+        socket_audio.bind((self.conference_ip, self.conference_port))
+        self.conference_port += 1
+        self.serverSockets[id] = (socket_camera, socket_screen, socket_audio)
+
+        user_thread = threading.Thread(target=self.user_udp_thread_start, args=(id, 0))
+        user_thread.start()
+        user_thread = threading.Thread(target=self.user_udp_thread_start, args=(id, 1))
+        user_thread.start()
+        user_thread = threading.Thread(target=self.user_udp_thread_start, args=(id, 2))
+        user_thread.start()
+
+        return socket_camera, socket_screen, socket_audio
+
+    def user_udp_thread_start(self, id, index):
+        '''
+        启动用户的UDP套接字进程
+        0: camera 1: screen 2: audio
+        '''
+        print((self.conference_ip, self.serverSockets[id]))
+        try:
+
+
+            print(f"Conference server listening on {self.conference_ip}:{self.serverSockets[id]}")
+            socket_=self.serverSockets[id][index]
+            while id in self.clients_info:
+                # 接收来自客户端的数据
+                data, addr = socket_.recvfrom(65535)  # 缓冲区大小为65535字节
+                print(f"Received data from {addr}: {len(data)}bytes")
+
+                # 将发送者的地址加入到客户端列表
+                # if addr not in self.clients_info.values():
+                #     client_id, _, _ = pickle.loads(data)
+                #     self.clients_info[client_id] = addr
+                #     print(f"New client added: {addr}")
+
+                # 将数据转发给其他客户端
+                for client in self.clients_info.values():
+                    # if client != addr:  # 不回发给发送者
+                    socket_.sendto(data, (client[0], client[index+1]))
+                    print(f"Forwarded data to {client}")
+        except OSError as e:
+            print(f"Error occurred: {e}")
+        finally:
+            # 关闭套接字
+            self.serverSockets[id][index].close()
+            print(f"Conference server {self.serverSockets[id][index]} socket closed.")
 
     '''
     非异步的版本
@@ -134,7 +192,8 @@ class MainServer:
         if conference_id in self.conference_servers:
             conference_server = self.conference_servers[conference_id]
             for client in conference_server.clients_info:
-                self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
+                self.tcp_conns_to_clients2[client].send(
+                    pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
                 self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
@@ -162,7 +221,8 @@ class MainServer:
                 del self.conference_servers[conference_id].clients_info[client_id]
                 print(f'Client {client_id} has quit conference{conference_id}')
                 for client in self.conference_servers[conference_id].clients_info:
-                    self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "quit", f"client {client_id} has quit conference")))
+                    self.tcp_conns_to_clients2[client].send(
+                        pickle.dumps((client_id, "quit", f"client {client_id} has quit conference")))
                 if len(self.conference_servers[conference_id].clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
                     self.conference_servers[conference_id].cancel_conference()
@@ -189,7 +249,6 @@ class MainServer:
         return {"status": "error", "conference_id": None, "conference_ip": None,
                 "conference_port": None}
 
-
     def handle_switch_conference(self, message):
         """
         switch conference: tell other clients to maintain others list
@@ -212,7 +271,7 @@ class MainServer:
             return {"status": "success"}
         else:
             return {"status": "error", "message": "Conference not found"}
-        
+
     def handle_search_conference(self):
         """
         search conference: return all the available conference
@@ -259,7 +318,6 @@ class MainServer:
                 if client_ip == ip:
                     return client_id, conference_id
         return None, None  # 如果没有找到该地址，返回 None  
-        
 
     # 测试
 
@@ -286,7 +344,7 @@ class MainServer:
             print(f"client_id:{client_id}, conference_id:{conference_id}")
             self.handle_quit_conference(client_id, conference_id)
             print(f"[Error] Handling client {addr} failed: {e}")
-            
+
         finally:
             connectionSocket.close()
             print(f"{addr} Client disconnected")
