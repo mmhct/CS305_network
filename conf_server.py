@@ -225,16 +225,24 @@ class MainServer:
         """
 
         if conference_id in self.conference_servers:
-            if client_id in self.conference_servers[conference_id].clients_info:
-                del self.conference_servers[conference_id].clients_info[client_id]
+            conference_server = self.conference_servers[conference_id]
+            if client_id in conference_server.clients_info:
+                del conference_server.clients_info[client_id]
                 print(f'Client {client_id} has quit conference{conference_id}')
-                for client in self.conference_servers[conference_id].clients_info:
+                for client in conference_server.clients_info:
                     self.tcp_conns_to_clients2[client].send(
                         pickle.dumps((client_id, "quit", f"client {client_id} has quit conference")))
-                if len(self.conference_servers[conference_id].clients_info) == 0:
+                if len(conference_server.clients_info) == 2:
+                    # 对clients_info两层循环，发送给客户端其他客户端的信息
+                    for client in conference_server.clients_info:
+                        for client_other in conference_server.clients_info:
+                            if client != client_other:
+                                self.tcp_conns_to_clients2[client].send(
+                                    pickle.dumps((client_other, "mode", conference_server.clients_info[client_other])))
+                if len(conference_server.clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
-                    self.conference_servers[conference_id].cancel_conference()
-                    del self.conference_servers[conference_id]
+                    conference_server.cancel_conference()
+                    del conference_server
                 return {"status": "success", "conference_id": None,
                         "conference_ip": None,
                         "conference_port": None}
@@ -325,7 +333,7 @@ class MainServer:
                 client_ip, _ = client_address
                 if client_ip == ip:
                     return client_id, conference_id
-        return None, None  # 如果没有找到该地址，返回 None  
+        return None, None  # 如果没有找到该地址，返回 None
 
     # 测试
 
