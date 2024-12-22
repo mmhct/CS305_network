@@ -33,6 +33,10 @@ class ConferenceClient:
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
         self.others = set()  # 除自己以外所有在会议室的人的id
+        self.mode = None
+        self.p2p_ip = None
+        self.p2p_port = None
+        self.p2p_sock = None
 
     def create_conference(self):
         """
@@ -213,6 +217,7 @@ class ConferenceClient:
                 audio_tuple = pickle.dumps(audio_tuple)
                 image_tuple = pickle.dumps(image_tuple)
                 screen_tuple = pickle.dumps(screen_tuple)
+                #分支
                 if self.is_screen_on:
                     print("sending screen data to server")
                     self.sock.sendto(screen_tuple, self.conference_conn)
@@ -455,6 +460,9 @@ class ConferenceClient:
                     print(f"Conference {self.conference_id} has been canceled")
                     self.reset()
                     pass
+                elif type_ == 'mode':
+                    print("switch mode")
+
 
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
