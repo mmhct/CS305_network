@@ -231,7 +231,7 @@ class MainServer:
 
         if conference_id in self.conference_servers:
             conference_server = self.conference_servers[conference_id]
-            if client_id in conference_server.clients_info:
+            if client_id in conference_server.clients_info.keys():
                 del conference_server.clients_info[client_id]
                 print(f'Client {client_id} has quit conference{conference_id}')
                 for client in conference_server.clients_info:
@@ -247,7 +247,7 @@ class MainServer:
                 if len(conference_server.clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
                     conference_server.cancel_conference()
-                    del conference_server
+                    del self.conference_servers[conference_id]
                 return {"status": "success", "conference_id": None,
                         "conference_ip": None,
                         "conference_port": None}
