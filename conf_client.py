@@ -36,7 +36,7 @@ class ConferenceClient:
         self.mode = None
         self.p2p_ip = None
         self.p2p_port = None
-        self.p2p_sock = None
+        self.p2p_conn = None
 
     def create_conference(self):
         """
@@ -222,13 +222,13 @@ class ConferenceClient:
                     print("p2p mode")
                     if self.is_screen_on:
                         print("sending screen data to p2p")
-                        self.sock.sendto(screen_tuple, self.p2p_sock)
+                        self.sock.sendto(screen_tuple, self.p2p_conn)
                     if self.is_camera_on:
                         print("sending camera data to p2p")
-                        self.sock.sendto(image_tuple, self.p2p_sock)
+                        self.sock.sendto(image_tuple, self.p2p_conn)
                     if self.is_audio_on:
                         print("sending audio data to p2p")
-                        self.sock.sendto(audio_tuple, self.p2p_sock)
+                        self.sock.sendto(audio_tuple, self.p2p_conn)
                 else:
                     if self.is_screen_on:
                         print("sending screen data to server")
@@ -481,7 +481,7 @@ class ConferenceClient:
                     self.p2p_ip = text[0]
                     self.p2p_port = int(text[1])
                     #todo: 改名
-                    self.p2p_sock = (self.p2p_ip, self.p2p_port)
+                    self.p2p_conn = (self.p2p_ip, self.p2p_port)
                 elif type_ == 'cs' and self.mode == 'p2p':
                     self.mode = 'cs'
                     print("switch mode to cs")
