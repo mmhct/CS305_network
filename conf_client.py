@@ -524,8 +524,8 @@ class ConferenceClient:
             # 获取本机 IP 地址,绑定UDP套接字
             # hostname = socket.gethostname()
             # local_ip = socket.gethostbyname(hostname)
-            self.sock.bind((local_ip, 20615 + self.id * 2))
-            print(f"本机UDP地址: {local_ip}:{20615 + self.id * 2}")
+            self.sock.bind((LOCAL_IP, 20615 + self.id * 2))
+            print(f"本机UDP地址: {LOCAL_IP}:{20615 + self.id * 2}")
 
             # Establish a second TCP connection
 
