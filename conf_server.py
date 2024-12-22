@@ -195,7 +195,15 @@ class MainServer:
                 self.tcp_conns_to_clients2[client].send(
                     pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
                 self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
+                if len(self.conference_servers[conference_id].clients_info) == 2:
+                    self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "p2p", (udp_ip, udp_port))))
+                    
+
+                if len(self.conference_servers[conference_id].clients_info) >= 3:
+                    self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "cs", (udp_ip, udp_port))))
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
+
+            
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")
             # Perform operations on the existing conference_server thread
