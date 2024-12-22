@@ -243,7 +243,7 @@ class MainServer:
                         for client_other in conference_server.clients_info:
                             if client != client_other:
                                 self.tcp_conns_to_clients2[client].send(
-                                    pickle.dumps((client_other, "mode", conference_server.clients_info[client_other])))
+                                    pickle.dumps((client_other, "p2p", conference_server.clients_info[client_other])))
                 if len(conference_server.clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
                     conference_server.cancel_conference()
