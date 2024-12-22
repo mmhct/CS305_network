@@ -287,8 +287,6 @@ class ConferenceClient:
                 elif type_ == 'text':
                     text = received_tuple[2]
                     print(text)
-                elif type_ == 'exit':
-                    self.reset()
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
@@ -417,7 +415,7 @@ class ConferenceClient:
                 if fields[0] == 'join':
                     input_conf_id = fields[1]
                     if input_conf_id.isdigit():
-                        self.join_conference(input_conf_id)
+                        self.join_conference(int(input_conf_id))
                     else:
                         print('[Warn]: Input conference ID must be in digital form')
                 elif fields[0] == 'switch':
