@@ -207,7 +207,7 @@ class MainServer:
             if len(conference_server.clients_info) >= 3:
                 for client in conference_server.clients_info:
                     self.tcp_conns_to_clients2[client].send(
-                                    pickle.dumps((client_other, "cs", "")))
+                                    pickle.dumps((0, "cs", "")))
                     
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")

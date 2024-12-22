@@ -33,7 +33,7 @@ class ConferenceClient:
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
         self.others = set()  # 除自己以外所有在会议室的人的id
-        self.mode = None
+        self.mode = 'cs'
         self.p2p_ip = None
         self.p2p_port = None
         self.p2p_conn = None
@@ -457,7 +457,14 @@ class ConferenceClient:
                     # text = pickle.loads(self.tcp_conn2.recv(1024))
                     print(text)
                 elif type_ == 'switch':
-                    #todo: maintain set others
+                    #del switch screen off {self.id} {self.conference_id}
+                    temp = text.split(' ')
+                    type_ = temp[1]
+                    client_id = int(temp[3])
+                    if type_ == 'screen':
+                        del self.recv_screen_data[client_id]
+                    elif type_ == 'camera':
+                        del self.recv_video_data[client_id]
                     print("switch")
                 elif type_ == 'join':
                     self.others.add(other_id)
