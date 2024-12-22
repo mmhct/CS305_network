@@ -27,8 +27,8 @@ class ConferenceClient:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         send_buffer_size = 6553600  # 例如，将缓冲区大小设置为 65536 字节
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
-        self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference
-        self.recv_screen_data = {}
+        self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference {client_id: data}
+        self.recv_screen_data = {} # {client_id: {id:(data[0],data[1],data[2]...data[n])}} 里面的这个id是自增维护号，n设为7-1=6
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -206,7 +206,7 @@ class ConferenceClient:
                 # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 compressed_image = compress_image(frame)
                 #compressed_screen = compress_image(image=screen, quality=0)
-                compressed_screen = compress_image(screen.resize((640, 480), Image.LANCZOS))
+                compressed_screen = compress_image(screen.resize((600, 400), Image.LANCZOS))
                 audio_tuple = (self.id, 'audio', audio_data)
                 image_tuple = (self.id, 'image', compressed_image)
                 screen_tuple = (self.id, 'screen', compressed_screen)
