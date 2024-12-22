@@ -465,6 +465,10 @@ class ConferenceClient:
                     print(self.others)
                 elif type_ == 'quit':
                     self.others.discard(other_id)
+                    if other_id in self.recv_video_data:
+                        del self.recv_video_data[other_id]
+                    if other_id in self.recv_screen_data:
+                        del self.recv_screen_data[other_id]
                     print(f"Client {other_id} left")
                     print(self.others)
                 elif type_ == 'exit':
