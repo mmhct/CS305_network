@@ -195,15 +195,20 @@ class MainServer:
                 self.tcp_conns_to_clients2[client].send(
                     pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
                 self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
-                if len(self.conference_servers[conference_id].clients_info) == 2:
-                    self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "p2p", (udp_ip, udp_port))))
-                    
-
-                if len(self.conference_servers[conference_id].clients_info) >= 3:
-                    self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "cs", (udp_ip, udp_port))))
+            #加入到clients_info    
             conference_server.clients_info[client_id] = (udp_ip, udp_port)
-
-            
+            if len(conference_server.clients_info) == 2:
+                    # 对clients_info两层循环，发送给客户端其他客户端的信息
+                    for client in conference_server.clients_info:
+                        for client_other in conference_server.clients_info:
+                            if client != client_other:
+                                self.tcp_conns_to_clients2[client].send(
+                                    pickle.dumps((client_other, "p2p", conference_server.clients_info[client_other])))
+            if len(conference_server.clients_info) >= 3:
+                for client in conference_server.clients_info:
+                    self.tcp_conns_to_clients2[client].send(
+                                    pickle.dumps((client_other, "cs", "")))
+                    
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")
             # Perform operations on the existing conference_server thread
