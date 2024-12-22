@@ -218,15 +218,27 @@ class ConferenceClient:
                 image_tuple = pickle.dumps(image_tuple)
                 screen_tuple = pickle.dumps(screen_tuple)
                 #分支
-                if self.is_screen_on:
-                    print("sending screen data to server")
-                    self.sock.sendto(screen_tuple, self.conference_conn)
-                if self.is_camera_on:
-                    print("sending camera data to server")
-                    self.sock.sendto(image_tuple, self.conference_conn)
-                if self.is_audio_on:
-                    print("sending audio data to server")
-                    self.sock.sendto(audio_tuple, self.conference_conn)
+                if self.mode == 'p2p':
+                    print("p2p mode")
+                    if self.is_screen_on:
+                        print("sending screen data to p2p")
+                        self.sock.sendto(screen_tuple, self.p2p_sock)
+                    if self.is_camera_on:
+                        print("sending camera data to p2p")
+                        self.sock.sendto(image_tuple, self.p2p_sock)
+                    if self.is_audio_on:
+                        print("sending audio data to p2p")
+                        self.sock.sendto(audio_tuple, self.p2p_sock)
+                else:
+                    if self.is_screen_on:
+                        print("sending screen data to server")
+                        self.sock.sendto(screen_tuple, self.conference_conn)
+                    if self.is_camera_on:
+                        print("sending camera data to server")
+                        self.sock.sendto(image_tuple, self.conference_conn)
+                    if self.is_audio_on:
+                        print("sending audio data to server")
+                        self.sock.sendto(audio_tuple, self.conference_conn)
                 print("keep sharing data")
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
@@ -325,8 +337,9 @@ class ConferenceClient:
         """
         显示图像和屏幕数据
         """
+
         self.others.add(0)
-        # self.others.append(1)
+        self.others.add(1)
         while True:
             self.recv_video_data[0] = capture_camera()
             self.recv_screen_data[0] = capture_screen()
@@ -452,6 +465,10 @@ class ConferenceClient:
                     print(self.others)
                 elif type_ == 'quit':
                     self.others.discard(other_id)
+                    if other_id in self.recv_video_data:
+                        del self.recv_video_data[other_id]
+                    if other_id in self.recv_screen_data:
+                        del self.recv_screen_data[other_id]
                     print(f"Client {other_id} left")
                     print(self.others)
                 elif type_ == 'exit':
@@ -505,8 +522,8 @@ class ConferenceClient:
             print(f"分配到的客户端id:{self.id}")
 
             # 获取本机 IP 地址,绑定UDP套接字
-            hostname = socket.gethostname()
-            local_ip = socket.gethostbyname(hostname)
+            # hostname = socket.gethostname()
+            # local_ip = socket.gethostbyname(hostname)
             self.sock.bind((local_ip, 20615 + self.id * 2))
             print(f"本机UDP地址: {local_ip}:{20615 + self.id * 2}")
 
