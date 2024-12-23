@@ -419,7 +419,7 @@ class ConferenceClient:
             try:
                 data, addr = self.sock_screen.recvfrom(65536)
                 received_tuple = pickle.loads(data)
-                print(f"received data from {addr}: {len(data)} bytes")
+                # print(f"received data from {addr}: {len(data)} bytes")
                 id = received_tuple[0]
                 type_ = received_tuple[1]
                 if type_ == 'image':
