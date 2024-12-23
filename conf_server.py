@@ -145,7 +145,7 @@ class ConferenceServer:
         start the ConferenceServer and necessary running tasks to handle clients in this conference
         '''
 
-        print((self.conference_ip, self.conference_port))
+        # print((self.conference_ip, self.conference_port))
 
         # 创建服务器的UDP套接字
 
@@ -158,7 +158,7 @@ class ConferenceServer:
             while self.running:
                 # 接收来自客户端的数据
                 data, addr = self.serverSocket_camera.recvfrom(65535)  # 缓冲区大小为65535字节
-                print(f"Received data from {addr}: {len(data)}bytes")
+                # print(f"Received data from {addr}: {len(data)}bytes")
 
                 # 将发送者的地址加入到客户端列表
                 # if addr not in self.clients_info.values():
@@ -172,9 +172,10 @@ class ConferenceServer:
                 for client in self.clients_info.values():
                     # if client != addr:  # 不回发给发送者
                     self.serverSocket_camera.sendto(data, (client[0], client[2]))
-                    print(f"Forwarded data to {(client[0], client[2])}")
+                    # print(f"Forwarded data to {(client[0], client[2])}")
         except OSError as e:
-            print(f"Error occurred: {e}")
+            # print(f"Error occurred: {e}")
+            pass
         finally:
             # 关闭套接字
             data = pickle.dumps(('', 'exit', ''))
@@ -189,20 +190,20 @@ class ConferenceServer:
         start the ConferenceServer and necessary running tasks to handle clients in this conference
         '''
 
-        print((self.conference_ip, self.conference_port))
+        # print((self.conference_ip, self.conference_port))
 
         # 创建服务器的UDP套接字
 
         try:
             # 绑定服务器套接字到指定的IP和端口
             self.serverSocket_screen.bind((self.conference_ip, self.conference_port + 2))
-            print(f"Conference server listening on {self.conference_ip}:{self.conference_port + 2}")
+            # print(f"Conference server listening on {self.conference_ip}:{self.conference_port + 2}")
 
             self.running = True
             while self.running:
                 # 接收来自客户端的数据
                 data, addr = self.serverSocket_screen.recvfrom(65535)  # 缓冲区大小为65535字节
-                print(f"Received data from {addr}: {len(data)}bytes")
+                # print(f"Received data from {addr}: {len(data)}bytes")
 
                 # 将发送者的地址加入到客户端列表
                 # if addr not in self.clients_info.values():
@@ -216,9 +217,10 @@ class ConferenceServer:
                 for client in self.clients_info.values():
                     # if client != addr:  # 不回发给发送者
                     self.serverSocket_screen.sendto(data, (client[0], client[3]))
-                    print(f"Forwarded data to {(client[0], client[3])}")
+                    # print(f"Forwarded data to {(client[0], client[3])}")
         except OSError as e:
-            print(f"Error occurred: {e}")
+            # print(f"Error occurred: {e}")
+            pass
         finally:
             # 关闭套接字
             data = pickle.dumps(('', 'exit', ''))
@@ -233,20 +235,20 @@ class ConferenceServer:
         start the ConferenceServer and necessary running tasks to handle clients in this conference
         '''
 
-        print((self.conference_ip, self.conference_port))
+        # print((self.conference_ip, self.conference_port))
 
         # 创建服务器的UDP套接字
 
         try:
             # 绑定服务器套接字到指定的IP和端口
             self.serverSocket_audio.bind((self.conference_ip, self.conference_port + 3))
-            print(f"Conference server listening on {self.conference_ip}:{self.conference_port + 3}")
+            # print(f"Conference server listening on {self.conference_ip}:{self.conference_port + 3}")
 
             self.running = True
             while self.running:
                 # 接收来自客户端的数据
                 data, addr = self.serverSocket_audio.recvfrom(65535)  # 缓冲区大小为65535字节
-                print(f"Received data from {addr}: {len(data)}bytes")
+                # print(f"Received data from {addr}: {len(data)}bytes")
 
                 # 将发送者的地址加入到客户端列表
                 # if addr not in self.clients_info.values():
@@ -260,9 +262,10 @@ class ConferenceServer:
                 for client in self.clients_info.values():
                     # if client != addr:  # 不回发给发送者
                     self.serverSocket_audio.sendto(data, (client[0], client[4]))
-                    print(f"Forwarded data to {(client[0], client[4])}")
+                    # print(f"Forwarded data to {(client[0], client[4])}")
         except OSError as e:
-            print(f"Error occurred: {e}")
+            # print(f"Error occurred: {e}")
+            pass
         finally:
             # 关闭套接字
             data = pickle.dumps(('', 'exit', ''))
@@ -311,9 +314,9 @@ class MainServer:
         threading.Thread(target=conference_server.start_screen).start()
         threading.Thread(target=conference_server.start_audio).start()
         # self.conference_servers[conference_id].create_udp(client_id)
-        print({"status": "success", "conference_id": conference_id,
-               "conference_ip": conference_server.conference_ip,
-               "conference_port": conference_port})
+        # print({"status": "success", "conference_id": conference_id,
+        #        "conference_ip": conference_server.conference_ip,
+        #        "conference_port": conference_port})
         return {"status": "success", "conference_id": conference_id,
                 "conference_ip": conference_server.conference_ip,
                 "conference_port": conference_port}
@@ -352,7 +355,8 @@ class MainServer:
                         pickle.dumps((0, "cs", "")))
 
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
-            print(f"client info {conference_server.clients_info}")
+            print(f"number of clients in conference{conference_id}: {len(conference_server.clients_info)}")
+            # print(f"client info {conference_server.clients_info}")
             # Perform operations on the existing conference_server thread
             # For example, you can call a method on the conference_server
             # conference_server.join_conference()  # 这个要定义
@@ -420,7 +424,7 @@ class MainServer:
         """
         switch conference: tell other clients to maintain others list
         """
-        print(f"Received switch message: {message}, type:{type(message)}")
+        # print(f"Received switch message: {message}, type:{type(message)}")
         client_id = int(message.split(' ')[3])
         conference_id = int(message.split(' ')[4])
 
@@ -430,12 +434,13 @@ class MainServer:
                 if other_client_id != client_id:
                     try:
                         temp = (client_id, 'switch', message)
-                        print(f"temp:{temp}")
+                        # print(f"temp:{temp}")
                         data = pickle.dumps(temp)
                         self.tcp_conns_to_clients2[other_client_id].send(data)
-                        print(f"Forwarded switch message to client {other_client_id}")
+                        # print(f"Forwarded switch message to client {other_client_id}")
                     except Exception as e:
-                        print(f"Failed to forward switch message to client {other_client_id}: {e}")
+                        # print(f"Failed to forward switch message to client {other_client_id}: {e}")
+                        pass
             return {"status": "success"}
         else:
             return {"status": "error", "message": "Conference not found"}
@@ -501,7 +506,7 @@ class MainServer:
                     # print("出现空字符串")
                     break
                 sentence = pickle.loads(sentence)  # 反序列化
-                print(f"sentence:{sentence}")
+                # print(f"sentence:{sentence}")
                 message = self.request_handler(addr, sentence)
                 # print(f"message:{message}")
                 serialized_message = pickle.dumps(message)  # 序列化为字节流
@@ -509,9 +514,9 @@ class MainServer:
         except (OSError, pickle.PickleError) as e:
             ip, _ = addr
             client_id, conference_id = self.find_conference_and_client_by_ip(self.conference_servers, ip)
-            print(f"client_id:{client_id}, conference_id:{conference_id}")
+            # print(f"client_id:{client_id}, conference_id:{conference_id}")
             self.handle_quit_conference(client_id, conference_id)
-            print(f"[Error] Handling client {addr} failed: {e}")
+            # print(f"[Error] Handling client {addr} failed: {e}")
 
         finally:
             connectionSocket.close()
@@ -532,7 +537,7 @@ class MainServer:
             serverSocket2.listen(100)
             print(f"The server{(self.server_ip, self.server_port)} is ready to receive")
         except OSError as e:
-            print(f"[Error] Server initialization failed: {e}")
+            # print(f"[Error] Server initialization failed: {e}")
             return
 
         while True:
@@ -541,7 +546,7 @@ class MainServer:
                 print(f"接受到来自 {addr} 的连接请求")
                 connectionSocket2, addr = serverSocket2.accept()
             except OSError as e:
-                print(f"[Error] Accepting connection failed: {e}")
+                # print(f"[Error] Accepting connection failed: {e}")
                 continue
 
             try:
@@ -552,7 +557,7 @@ class MainServer:
                 self.tcp_conns_to_clients[self.max_client_id] = connectionSocket
                 self.tcp_conns_to_clients2[self.max_client_id] = connectionSocket2
             except (OSError, pickle.PickleError) as e:
-                print(f"[Error] Sending client ID to {addr} failed: {e}")
+                # print(f"[Error] Sending client ID to {addr} failed: {e}")
                 connectionSocket.close()
                 continue
 
@@ -560,7 +565,7 @@ class MainServer:
                 client_thread = threading.Thread(target=self.handle_client, args=(connectionSocket, addr))
                 client_thread.start()
             except Exception as e:
-                print(f"[Error] Starting thread for client {addr} failed: {e}")
+                # print(f"[Error] Starting thread for client {addr} failed: {e}")
                 connectionSocket.close()
 
 
