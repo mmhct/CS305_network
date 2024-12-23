@@ -80,7 +80,7 @@ class ConferenceClient:
             cmd = f"create {self.id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
-            print("字典:", data)
+            # print("字典:", data)
             try:
                 if isinstance(data, dict):
                     status = data["status"]
@@ -126,7 +126,7 @@ class ConferenceClient:
             cmd = f"join {self.id} {conference_id} {udp_ip} {udp_port}"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
-            print("字典:", data)
+            # print("字典:", data)
             try:
                 if isinstance(data, dict):
                     status = data["status"]
@@ -179,7 +179,7 @@ class ConferenceClient:
             # 发送退出会议的命令到主服务器
             self.tcp_conn.sendall(pickle.dumps(cmd))
             data = pickle.loads(self.tcp_conn.recv(1024))
-            print("字典:", data)
+            # print("字典:", data)
 
             if isinstance(data, dict) and data["status"] == "success":
                 # 关闭与会议服务器的UDP连接
@@ -216,7 +216,7 @@ class ConferenceClient:
             cmd = "cancel"
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
-            print("字典:", data)
+            # print("字典:", data)
 
             try:
                 status = data["status"]
