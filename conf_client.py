@@ -374,6 +374,7 @@ class ConferenceClient:
             # Combine pieces if needed
             np_pieces = [np.array(piece) for piece in self.recv_screen_data[client_id][image_id]]
             combined_image = np.vstack(np_pieces)
+            combined_image =cv2.cvtColor(combined_image, cv2.COLOR_BGR2RGB)
             combined_image = Image.fromarray(combined_image)
             self.screen_to_display[client_id] = combined_image
             self.screen_to_display_count[client_id] = 0
