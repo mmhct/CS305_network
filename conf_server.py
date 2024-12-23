@@ -17,7 +17,7 @@ class ConferenceServer:
         self.data_types = ['screen', 'camera', 'audio', 'text']  # example data types in a video conference
         self.owner_ip = None  # the client who create the conference
         self.owner_port = None  # the port for the owner client
-        self.clients_info = {}  # 实际上应该是一个字典，key包含client_id;value包含UDP的(ip,camera_port,screen_port,audio_port)
+        self.clients_info = {}  # 实际上应该是一个字典，key包含client_id;value包含UDP的(ip,camera_port,screen_port,audio_port,text_port)
         self.mode = 'Client-Server'  # or 'P2P' if you want to support peer-to-peer conference mode
         self.serverSocket = socket(AF_INET, SOCK_DGRAM)
         self.serverSockets = {}  # {client_id:(camera_socket, screen_socket, audio_socket)}
@@ -36,14 +36,11 @@ class ConferenceServer:
         创建UDP套接字
         '''
         socket_camera = socket(AF_INET, SOCK_DGRAM)
-        socket_camera.bind((self.conference_ip, self.conference_port))
-        self.conference_port += 1
+        socket_camera.bind((self.conference_ip, self.conference_port + 1))
         socket_screen = socket(AF_INET, SOCK_DGRAM)
-        socket_screen.bind((self.conference_ip, self.conference_port))
-        self.conference_port += 1
+        socket_screen.bind((self.conference_ip, self.conference_port + 2))
         socket_audio = socket(AF_INET, SOCK_DGRAM)
-        socket_audio.bind((self.conference_ip, self.conference_port))
-        self.conference_port += 1
+        socket_audio.bind((self.conference_ip, self.conference_port + 3))
         self.serverSockets[id] = (socket_camera, socket_screen, socket_audio)
 
         user_thread = threading.Thread(target=self.user_udp_thread_start, args=(id, 0))
@@ -62,9 +59,7 @@ class ConferenceServer:
         '''
         print((self.conference_ip, self.serverSockets[id]))
         try:
-
-
-            print(f"Conference server listening on {self.conference_ip}:{self.serverSockets[id]}")
+            print(f"Conference server listening on {self.conference_ip} with sockets: {self.serverSockets[id]}")
             socket_=self.serverSockets[id][index]
             while id in self.clients_info:
                 # 接收来自客户端的数据
@@ -86,7 +81,8 @@ class ConferenceServer:
             print(f"Error occurred: {e}")
         finally:
             # 关闭套接字
-            self.serverSockets[id][index].close()
+            if self.serverSockets[id][index]:
+                self.serverSockets[id][index].close()
             print(f"Conference server {self.serverSockets[id][index]} socket closed.")
 
     '''
@@ -158,7 +154,7 @@ class MainServer:
         create conference: create and start the corresponding ConferenceServer, and reply necessary info to client
         """
         conference_id = self.generate_conference_id()
-        conference_port = conference_id * 2 + 10000  # 我这里10001有冲突就换了一个
+        conference_port = conference_id * 20 + 10000  # 我这里10001有冲突就换了一个
         # conference_port = 12345
         conference_server = ConferenceServer()
         conference_server.conference_id = conference_id
@@ -167,10 +163,11 @@ class MainServer:
         conference_server.owner_ip = addr[0]
         conference_server.owner_port = addr[1]
         conference_server.MainServer = self
-        conference_server.clients_info[client_id] = (udp_ip, udp_port)  # 将用户id和udp套接字地址存入
+        conference_server.clients_info[client_id] = (udp_ip, 0, 0, 0, udp_port)  # 将用户id和udp套接字地址存入
         print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
         self.conference_servers[conference_id] = conference_server
         threading.Thread(target=conference_server.start).start()
+        self.conference_servers[conference_id].create_udp(conference_id)
         print({"status": "success", "conference_id": conference_id,
                "conference_ip": conference_server.conference_ip,
                "conference_port": conference_port})
