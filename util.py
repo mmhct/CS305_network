@@ -3,6 +3,7 @@ Simple util implementation for video conference
 Including data capture, image compression and image overlap
 Note that you can use your own implementation as well :)
 '''
+import io
 from io import BytesIO
 import pyaudio
 import cv2
@@ -10,7 +11,6 @@ import numpy as np
 import pyautogui
 from PIL import Image, ImageGrab
 from config import *
-
 
 # audio setting
 FORMAT = pyaudio.paInt16
@@ -28,6 +28,32 @@ else:
     can_capture_camera = False
 
 my_screen_size = pyautogui.size()
+
+
+def resize_image_to_target_size(img, target_size_bytes):
+    # 获取图片的初始尺寸
+
+    # 初始化压缩后的图片字节流大小
+    # img_byte_arr = io.BytesIO()
+    # img.save(img_byte_arr, format='JPEG')
+    # current_size_bytes = len(img_byte_arr.getvalue())
+
+    # 如果当前大小已经小于目标大小，直接返回原图
+    # if current_size_bytes <= target_size_bytes:
+    #     return img
+
+    # if current_size_bytes > target_size_bytes:
+    # 缩小图片尺寸
+    # width = int(width * 0.5)
+    # height = int(height * 0.5)
+    img = img.resize((600, 400), Image.LANCZOS)
+
+    # 获取压缩后的图片字节流大小
+    # img_byte_arr = io.BytesIO()
+    # img.save(img_byte_arr, format='JPEG')
+    # current_size_bytes = len(img_byte_arr.getvalue())
+
+    return img
 
 
 def resize_image_to_fit_screen(image, my_screen_size):
@@ -106,6 +132,18 @@ def capture_screen():
     # img = pyautogui.screenshot()
     img = ImageGrab.grab()
     return img
+
+
+def split_image(image, num_pieces):
+    # Convert PIL.Image to NumPy array
+    image=image.resize((1280, 720), Image.LANCZOS)
+    image_array = np.array(image)
+    height, width, _ = image_array.shape
+    piece_height = height // num_pieces
+    pieces = [image_array[i * piece_height:(i + 1) * piece_height, :, :] for i in range(num_pieces)]
+    pieces = [Image.fromarray(piece) for piece in pieces]
+
+    return pieces
 
 
 def capture_camera():
