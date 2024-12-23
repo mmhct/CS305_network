@@ -42,6 +42,7 @@ class ConferenceClient:
         self.screen_to_display_count = {}  # {client_id: count} 用于计数，如果count==5，就不展示
         # {id:data} id是客户端id,cnt是指展示了多少次，这里设置如果展示5次就自动清除
         # 逻辑如下，如果有新屏幕进来，直接替换，在展示完毕的时候会检查一下这个属性，将cnt++，当cnt==5，说明很有可能是关闭了屏幕，在提取的时候检查cnt==4的不予展示
+        self.audio_data = {}
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -316,7 +317,7 @@ class ConferenceClient:
                     self.store_image(id, image)
                 elif type_ == 'audio':
                     audio_data = received_tuple[2]
-                    self.play_audio(audio_data)
+                    self.play_audio(id,audio_data)
                 elif type_ == 'screen':
                     index = received_tuple[2]
                     screen_index = received_tuple[3]
@@ -341,12 +342,48 @@ class ConferenceClient:
         self.conference_conn = None
         self.others.clear()
 
-    def play_audio(self, audio_data):
+    def play_audio(self, id, audio_data):
         """
         播放音频数据
         """
+        global count
         print('[Info]: Playing audio...')
-        streamout.write(audio_data)  # 播放音频数据
+        if id in self.audio_data:
+            self.audio_data[id] += audio_data
+        else:
+            self.audio_data[id] = audio_data
+        if count >= 8:
+            combined_audio = self.mix_audio_data()
+            streamout.write(combined_audio)
+            count = 0
+            self.audio_data.clear()
+
+    def mix_audio_data(self):
+        """
+        Mix audio data from different IDs
+        """
+        if not self.audio_data:
+            return b''
+
+        # Find the length of the longest audio data
+        max_length = max(len(data) for data in self.audio_data.values())
+
+        # Initialize an array to hold the mixed audio data
+        mixed_audio = np.zeros(max_length, dtype=np.int16)
+
+        # Mix the audio data
+        for data in self.audio_data.values():
+            audio_array = np.frombuffer(data, dtype=np.int16)
+            mixed_audio[:len(audio_array)] += audio_array
+
+        # Clip the values to the valid range for int16
+        mixed_audio = np.clip(mixed_audio, -32768, 32767)
+
+        return mixed_audio.tobytes()
+
+
+
+
 
     def store_image(self, id, image_data):
         """
@@ -374,7 +411,7 @@ class ConferenceClient:
             # Combine pieces if needed
             np_pieces = [np.array(piece) for piece in self.recv_screen_data[client_id][image_id]]
             combined_image = np.vstack(np_pieces)
-            combined_image =cv2.cvtColor(combined_image, cv2.COLOR_BGR2RGB)
+            combined_image = cv2.cvtColor(combined_image, cv2.COLOR_BGR2RGB)
             combined_image = Image.fromarray(combined_image)
             self.screen_to_display[client_id] = combined_image
             self.screen_to_display_count[client_id] = 0
@@ -383,7 +420,6 @@ class ConferenceClient:
         """
         显示图像和屏幕数据
         """
-        global count
 
         self.others.add(0)
         # self.others.add(1)
