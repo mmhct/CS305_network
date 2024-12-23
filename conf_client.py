@@ -336,7 +336,7 @@ class ConferenceClient:
                     print("p2p mode")
                     if self.is_audio_on:
                         print("sending audio data to p2p")
-                        self.sock.sendto(audio_tuple, self.p2p_sudio_conn)
+                        self.sock.sendto(audio_tuple, self.p2p_audio_conn)
                 else:
                     if self.is_audio_on:
                         print("sending audio data to server")
@@ -706,7 +706,7 @@ class ConferenceClient:
                     self.p2p_conn = (self.p2p_ip, self.p2p_port)
                     self.p2p_camera_conn = (self.p2p_ip, self.p2p_port + 1)
                     self.p2p_screen_conn = (self.p2p_ip, self.p2p_port + 2)
-                    self.p2p_sudio_conn = (self.p2p_ip, self.p2p_port + 3)
+                    self.p2p_audio_conn = (self.p2p_ip, self.p2p_port + 3)
                 elif type_ == 'cs':  # and self.mode == 'p2p':
                     self.mode = 'cs'
                     print("switch mode to cs")
