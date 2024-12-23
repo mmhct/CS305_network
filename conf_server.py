@@ -120,8 +120,9 @@ class ConferenceServer:
                 #     print(f"New client added: {addr}")
 
                 # 将数据转发给其他客户端
-                clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
-                for client in clients_info_copy.values():
+                # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
+                # for client in clients_info_copy.values():
+                for client in self.clients_info.values():
                     # if client != addr:  # 不回发给发送者
                     self.serverSocket.sendto(data, client)
                     print(f"Forwarded data to {client}")
