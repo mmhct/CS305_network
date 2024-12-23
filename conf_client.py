@@ -337,15 +337,15 @@ class ConferenceClient:
                 audio_tuple = pickle.dumps(audio_tuple)
 
                 if self.mode == 'p2p':
-                    print("p2p mode")
+                    # print("p2p mode")
                     if self.is_audio_on:
-                        print("sending audio data to p2p")
+                        # print("sending audio data to p2p")
                         self.sock.sendto(audio_tuple, self.p2p_audio_conn)
                 else:
                     if self.is_audio_on:
-                        print("sending audio data to server")
+                        # print("sending audio data to server")
                         self.sock.sendto(audio_tuple, self.conference_audio_conn)
-                print("keep sharing data")
+                # print("keep sharing data")
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
 
