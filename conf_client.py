@@ -1,10 +1,18 @@
-import threading
 import pickle
 import socket
+import threading
 import time
+import tkinter as tk
 from datetime import datetime
 
+from PIL import ImageTk
+
 from util import *
+
+global count
+global screen_pieces_count
+count = 0
+screen_pieces_count = 0
 
 
 class ConferenceClient:
@@ -17,7 +25,7 @@ class ConferenceClient:
         self.server_addr = None  # server addr
         self.on_meeting = False  # status
         self.tcp_conn = None  # you may need to maintain multiple conns for a single conference
-        self.tcp_conn2 = None # 负责接收指令的tcp连接
+        self.tcp_conn2 = None  # 负责接收指令的tcp连接
         self.support_data_types = ['screen', 'camera', 'audio', 'text']  # for some types of data
         self.conference_id = None  # 存储当前所在的会议号
         self.conference_ip = None  # *主服务器提供*
@@ -28,7 +36,12 @@ class ConferenceClient:
         send_buffer_size = 6553600  # 例如，将缓冲区大小设置为 65536 字节
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
         self.recv_video_data = {}  # you may need to save received streamd data from other clients in conference {client_id: data}
-        self.recv_screen_data = {} # {client_id: {id:(data[0],data[1],data[2]...data[n])}} 里面的这个id是自增维护号，n设为7-1=6
+        self.video_display_count = {}  # {client_id: count} 用于计数，如果count==5，就不展示
+        self.recv_screen_data = {}  # {client_id: {id1:(data[0],data[1],data[2]...data[n])},id2:(...)} 里面的这个id是自增维护号，n设为7-1=6
+        self.screen_to_display = {}
+        self.screen_to_display_count = {}  # {client_id: count} 用于计数，如果count==5，就不展示
+        # {id:data} id是客户端id,cnt是指展示了多少次，这里设置如果展示5次就自动清除
+        # 逻辑如下，如果有新屏幕进来，直接替换，在展示完毕的时候会检查一下这个属性，将cnt++，当cnt==5，说明很有可能是关闭了屏幕，在提取的时候检查cnt==4的不予展示
 
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
@@ -37,6 +50,8 @@ class ConferenceClient:
         self.p2p_ip = None
         self.p2p_port = None
         self.p2p_conn = None
+        global count
+        count = 0
 
     def create_conference(self):
         """
@@ -125,7 +140,6 @@ class ConferenceClient:
             self.tcp_conn.sendall(pickle.dumps(cmd))  # 序列化发送内容
             data = pickle.loads(self.tcp_conn.recv(1024))  # 反序列化收到的data
             print("available conference: ", data)
-            
 
     def quit_conference(self):
         """
@@ -199,6 +213,8 @@ class ConferenceClient:
         running task: keep sharing (capture and send) certain type of data from server or clients (P2P)
         you can create different functions for sharing various kinds of data
         '''
+        global screen_pieces_count
+        screen_pieces_count = 0
         while True:
             if not self.on_meeting:
                 time.sleep(0.03)  # 控制刷新率
@@ -209,20 +225,28 @@ class ConferenceClient:
                 audio_data = streamin.read(CHUNK)
                 # pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 compressed_image = compress_image(frame)
-                #compressed_screen = compress_image(image=screen, quality=0)
-                compressed_screen = compress_image(screen.resize((600, 400), Image.LANCZOS))
+                # compressed_screen = compress_image(image=screen, quality=0)
+                # compressed_screen = compress_image(screen.resize((600, 400), Image.LANCZOS))
+                screen_pieces = split_image(screen, 7)
+                for i, piece in enumerate(screen_pieces):
+                    screen_pieces[i] = compress_image(piece)
                 audio_tuple = (self.id, 'audio', audio_data)
                 image_tuple = (self.id, 'image', compressed_image)
-                screen_tuple = (self.id, 'screen', compressed_screen)
+                screen_tuples = []
+                for i, piece in enumerate(screen_pieces):
+                    screen_tuple = (self.id, 'screen', screen_pieces_count, i, screen_pieces[i])
+                    screen_tuple = pickle.dumps(screen_tuple)
+                    screen_tuples.append(screen_tuple)
                 audio_tuple = pickle.dumps(audio_tuple)
                 image_tuple = pickle.dumps(image_tuple)
-                screen_tuple = pickle.dumps(screen_tuple)
-                #分支
+                # screen_tuples = pickle.dumps(screen_tuple)
+                # 分支
                 if self.mode == 'p2p':
                     print("p2p mode")
                     if self.is_screen_on:
                         print("sending screen data to p2p")
-                        self.sock.sendto(screen_tuple, self.p2p_conn)
+                        for screen_tuple in screen_tuples:
+                            self.sock.sendto(screen_tuple, self.p2p_conn)
                     if self.is_camera_on:
                         print("sending camera data to p2p")
                         self.sock.sendto(image_tuple, self.p2p_conn)
@@ -232,7 +256,8 @@ class ConferenceClient:
                 else:
                     if self.is_screen_on:
                         print("sending screen data to server")
-                        self.sock.sendto(screen_tuple, self.conference_conn)
+                        for screen_tuple in screen_tuples:
+                            self.sock.sendto(screen_tuple, self.conference_conn)
                     if self.is_camera_on:
                         print("sending camera data to server")
                         self.sock.sendto(image_tuple, self.conference_conn)
@@ -293,9 +318,11 @@ class ConferenceClient:
                     audio_data = received_tuple[2]
                     self.play_audio(audio_data)
                 elif type_ == 'screen':
-                    screen = decompress_image(received_tuple[2])
+                    index = received_tuple[2]
+                    screen_index = received_tuple[3]
+                    screen_data = decompress_image(received_tuple[4])
                     # screen = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
-                    self.store_screen(id, screen)
+                    self.store_screen(id, index, screen_index, screen_data)
                 elif type_ == 'text':
                     text = received_tuple[2]
                     print(text)
@@ -326,54 +353,72 @@ class ConferenceClient:
         存储图像数据
         """
         self.recv_video_data[id] = image_data
+        self.video_display_count[id] = 0
 
-    def store_screen(self, id, screen_data):
+    def store_screen(self, client_id, image_id, index, screen_data):
         """
         存储屏幕数据
+        image_id: 自增id
+        index: 片段序号(0-6)
         """
-        self.recv_screen_data[id] = screen_data
+        if client_id not in self.recv_screen_data:
+            self.recv_screen_data[client_id] = {}
+
+        if image_id not in self.recv_screen_data[client_id]:
+            self.recv_screen_data[client_id][image_id] = [None] * 7  # Initialize a list with 7 None elements
+
+        self.recv_screen_data[client_id][image_id][index] = screen_data
+
+        # Check if all pieces are received
+        if all(piece is not None for piece in self.recv_screen_data[client_id][image_id]):
+            # Combine pieces if needed
+            np_pieces = [np.array(piece) for piece in self.recv_screen_data[client_id][image_id]]
+            combined_image = np.vstack(np_pieces)
+            combined_image = Image.fromarray(combined_image)
+            self.screen_to_display[client_id] = combined_image
+            self.screen_to_display_count[client_id] = 0
 
     def display_combined(self):
         """
         显示图像和屏幕数据
         """
+        global count
 
         self.others.add(0)
-        self.others.add(1)
+        # self.others.add(1)
         while True:
+            # if count == 1000:
+            #     self.recv_screen_data.clear()
+            #     self.recv_video_data.clear()
+            #     count = 0
+            # count += 1
             self.recv_video_data[0] = capture_camera()
-            self.recv_screen_data[0] = capture_screen()
-            # self.recv_video_data[1] = capture_camera()
-            # self.recv_screen_data[1] = capture_screen()
+            self.screen_to_display[0] = capture_screen()
+            self.screen_to_display_count[0] = 0
+            self.video_display_count[0] = 0
+
             others_copy = self.others.copy()
             for client_id in others_copy:
-                if client_id in self.recv_video_data and client_id in self.recv_screen_data:
+                if client_id in self.recv_video_data and self.video_display_count[client_id] < 5 and client_id in self.screen_to_display and \
+                        self.screen_to_display_count[client_id] < 5:
+                    self.screen_to_display_count[client_id] += 1
+                    self.video_display_count[client_id] += 1
                     cv2.imshow(str(client_id), np.array(
-                        overlay_camera_images(self.recv_screen_data[client_id], [self.recv_video_data[client_id]])))
+                        overlay_camera_images(self.screen_to_display[client_id], [self.recv_video_data[client_id]])))
                     cv2.waitKey(1)
-                elif client_id in self.recv_video_data:
+                elif client_id in self.recv_video_data and self.video_display_count[client_id] < 5:
+                    self.video_display_count[client_id] += 1
                     cv2.imshow(str(client_id), np.array(self.recv_video_data[client_id]))
                     cv2.waitKey(1)
-                elif client_id in self.recv_screen_data:
-                    cv2.imshow(str(client_id), np.array(self.recv_screen_data[client_id].resize((1920, 1080), Image.LANCZOS)))
+                elif client_id in self.screen_to_display and self.screen_to_display_count[client_id] < 5:
+                    self.screen_to_display_count[client_id] += 1
+                    cv2.imshow(str(client_id),
+                               np.array(self.screen_to_display[client_id].resize((1920, 1080), Image.LANCZOS)))
                     cv2.waitKey(1)
+                else:
+                    if cv2.getWindowProperty(str(client_id), cv2.WND_PROP_VISIBLE):
+                        cv2.destroyWindow(str(client_id))
 
-            # for client_id in frames2:
-            #     cv2.imshow(str(client_id), np.array(overlay_camera_images(frames2[client_id],None)))
-            # if client_id in self.recv_screen_data and client_id in frames1:
-            #     combined_image = overlay_camera_images(frames2[client_id], frames1[client_id])
-            # cv2.imshow(str(i), np.array(combined_image))
-
-            # for client_id, data in self.recv_video_data.items():
-            #     frames.append(data)
-            # for client_id, data in self.recv_screen_data.items():
-            #     frames.append(data)
-            # frames.append(self.recv_screen_data[0])
-            # self.recv_video_data.clear()
-            # self.recv_screen_data.clear()
-            # combined_frame = np.hstack(frames)
-            # cv2.imshow(, combined_frame)
-            # cv2.waitKey(1)
             time.sleep(0.03)  # 控制刷新率
 
     def start_conference(self):
@@ -450,21 +495,22 @@ class ConferenceClient:
                 time.sleep(0.03)  # 控制刷新率
                 continue
             try:
-                data = pickle.loads(self.tcp_conn2.recv(1024)) #id,  'text', text
+                data = pickle.loads(self.tcp_conn2.recv(1024))  # id,  'text', text
                 print(f"Received data: {data}")  # 调试信息
                 other_id, type_, text = data
                 if type_ == 'text':
                     # text = pickle.loads(self.tcp_conn2.recv(1024))
                     print(text)
                 elif type_ == 'switch':
-                    #del switch screen off {self.id} {self.conference_id}
+                    # del switch screen off {self.id} {self.conference_id}
                     temp = text.split(' ')
                     type_ = temp[1]
                     client_id = int(temp[3])
-                    if type_ == 'screen':
-                        del self.recv_screen_data[client_id]
-                    elif type_ == 'camera':
-                        del self.recv_video_data[client_id]
+                    # if type_ == 'screen':
+                    #     del self.recv_screen_data[client_id]
+                    # elif type_ == 'camera':
+                    #     del self.recv_video_data[client_id]
+                    # 现在的实现形式不需要删除，只需要不展示即可
                     print("switch")
                 elif type_ == 'join':
                     self.others.add(other_id)
@@ -472,10 +518,11 @@ class ConferenceClient:
                     print(self.others)
                 elif type_ == 'quit':
                     self.others.discard(other_id)
-                    if other_id in self.recv_video_data:
-                        del self.recv_video_data[other_id]
-                    if other_id in self.recv_screen_data:
-                        del self.recv_screen_data[other_id]
+                    # if other_id in self.recv_video_data:
+                    #     del self.recv_video_data[other_id]
+                    # if other_id in self.recv_screen_data:
+                    #     del self.recv_screen_data[other_id]
+                    # 现在的实现形式不需要删除，只需要不展示即可
                     print(f"Client {other_id} left")
                     print(self.others)
                 elif type_ == 'exit':
@@ -496,7 +543,6 @@ class ConferenceClient:
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
                 break
-
 
     def run(self):
         threads = [
