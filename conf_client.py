@@ -698,7 +698,7 @@ class ConferenceClient:
                     print(f"Conference {self.conference_id} has been canceled")
                     self.reset()
                     pass
-                elif type_ == 'p2p':  # and self.mode == 'cs':
+                elif type_ == 'p2p':#and self.mode == 'cs':
                     self.mode = 'p2p'
                     print("switch mode to p2p")
                     self.p2p_ip = text[0]
