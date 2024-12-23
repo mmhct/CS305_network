@@ -244,6 +244,10 @@ class MainServer:
                             if client != client_other:
                                 self.tcp_conns_to_clients2[client].send(
                                     pickle.dumps((client_other, "p2p", conference_server.clients_info[client_other])))
+                if len(conference_server.clients_info) == 1:
+                    for client in conference_server.clients_info:
+                        self.tcp_conns_to_clients2[client].send(
+                                    pickle.dumps((0, "cs", "")))
                 if len(conference_server.clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
                     conference_server.cancel_conference()
@@ -274,6 +278,7 @@ class MainServer:
         """
         switch conference: tell other clients to maintain others list
         """
+        print(f"Received switch message: {message}, type:{type(message)}")
         client_id = int(message.split(' ')[3])
         conference_id = int(message.split(' ')[4])
 

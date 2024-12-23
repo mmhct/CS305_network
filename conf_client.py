@@ -279,24 +279,24 @@ class ConferenceClient:
             if self.is_screen_on:
                 print("switch screen on")
             else:
-                cmd = f'switch screen off {self.id} {self.conference_id}'
-                self.tcp_conn.sendall(pickle.dumps(cmd))
+                # cmd = f'switch screen off {self.id} {self.conference_id}'
+                # self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch screen off")
         if data_type == 'camera':
             self.is_camera_on = not self.is_camera_on
             if self.is_camera_on:
                 print("switch camera on")
             else:
-                cmd = f'switch camera off {self.id} {self.conference_id}'
-                self.tcp_conn.sendall(pickle.dumps(cmd))
+                # cmd = f'switch camera off {self.id} {self.conference_id}'
+                # self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch camera off")
         if data_type == 'audio':
             self.is_audio_on = not self.is_audio_on
             if self.is_audio_on:
                 print("switch audio on")
             else:
-                cmd = f'switch audio off {self.id} {self.conference_id}'
-                self.tcp_conn.sendall(pickle.dumps(cmd))
+                # cmd = f'switch audio off {self.id} {self.conference_id}'
+                # self.tcp_conn.sendall(pickle.dumps(cmd))
                 print("switch audio off")
 
     def keep_recv(self):
@@ -529,13 +529,13 @@ class ConferenceClient:
                     print(f"Conference {self.conference_id} has been canceled")
                     self.reset()
                     pass
-                elif type_ == 'p2p' and self.mode == 'cs':
+                elif type_ == 'p2p':#and self.mode == 'cs':
                     self.mode = 'p2p'
                     print("switch mode to p2p")
                     self.p2p_ip = text[0]
                     self.p2p_port = int(text[1])
                     self.p2p_conn = (self.p2p_ip, self.p2p_port)
-                elif type_ == 'cs' and self.mode == 'p2p':
+                elif type_ == 'cs': #and self.mode == 'p2p':
                     self.mode = 'cs'
                     print("switch mode to cs")
 
