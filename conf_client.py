@@ -722,7 +722,7 @@ class ConferenceClient:
             threading.Thread(target=self.keep_share_camera),
             threading.Thread(target=self.keep_share_screen),
             threading.Thread(target=self.keep_share_audio),
-            threading.Thread(target=self.keep_recv),
+            # threading.Thread(target=self.keep_recv),
             threading.Thread(target=self.keep_recv_camera),
             threading.Thread(target=self.keep_recv_screen),
             threading.Thread(target=self.keep_recv_audio),

@@ -92,49 +92,49 @@ class ConferenceServer:
     非异步的版本
     '''
 
-    def start(self):
-        '''
-        start the ConferenceServer and necessary running tasks to handle clients in this conference
-        '''
+    # def start(self):
+    #     '''
+    #     start the ConferenceServer and necessary running tasks to handle clients in this conference
+    #     '''
 
-        print((self.conference_ip, self.conference_port))
+    #     print((self.conference_ip, self.conference_port))
 
-        # 创建服务器的UDP套接字
+    #     # 创建服务器的UDP套接字
 
-        try:
-            # 绑定服务器套接字到指定的IP和端口
-            self.serverSocket.bind((self.conference_ip, self.conference_port))
-            print(f"Conference server listening on {self.conference_ip}:{self.conference_port}")
+    #     try:
+    #         # 绑定服务器套接字到指定的IP和端口
+    #         self.serverSocket.bind((self.conference_ip, self.conference_port))
+    #         print(f"Conference server listening on {self.conference_ip}:{self.conference_port}")
 
-            self.running = True
-            while self.running:
-                # 接收来自客户端的数据
-                data, addr = self.serverSocket.recvfrom(65535)  # 缓冲区大小为65535字节
-                print(f"Received data from {addr}: {len(data)}bytes")
+    #         self.running = True
+    #         while self.running:
+    #             # 接收来自客户端的数据
+    #             data, addr = self.serverSocket.recvfrom(65535)  # 缓冲区大小为65535字节
+    #             print(f"Received data from {addr}: {len(data)}bytes")
 
-                # 将发送者的地址加入到客户端列表
-                # if addr not in self.clients_info.values():
-                #     client_id, _, _ = pickle.loads(data)
-                #     self.clients_info[client_id] = addr
-                #     print(f"New client added: {addr}")
+    #             # 将发送者的地址加入到客户端列表
+    #             # if addr not in self.clients_info.values():
+    #             #     client_id, _, _ = pickle.loads(data)
+    #             #     self.clients_info[client_id] = addr
+    #             #     print(f"New client added: {addr}")
 
-                # 将数据转发给其他客户端
-                # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
-                # for client in clients_info_copy.values():
-                for client in self.clients_info.values():
-                    # if client != addr:  # 不回发给发送者
-                    self.serverSocket.sendto(data, client)
-                    print(f"Forwarded data to {client}")
-        except OSError as e:
-            print(f"Error occurred: {e}")
-        finally:
-            # 关闭套接字
-            data = pickle.dumps(('', 'exit', ''))
-            for client in self.clients_info.keys():
-                self.MainServer.tcp_conns_to_clients2[client].send(data)
-            self.clients_info.clear()
-            self.serverSocket.close()
-            print(f"Conference server {self.conference_id} socket closed.")
+    #             # 将数据转发给其他客户端
+    #             # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
+    #             # for client in clients_info_copy.values():
+    #             for client in self.clients_info.values():
+    #                 # if client != addr:  # 不回发给发送者
+    #                 self.serverSocket.sendto(data, client)
+    #                 print(f"Forwarded data to {client}")
+    #     except OSError as e:
+    #         print(f"Error occurred: {e}")
+    #     finally:
+    #         # 关闭套接字
+    #         data = pickle.dumps(('', 'exit', ''))
+    #         for client in self.clients_info.keys():
+    #             self.MainServer.tcp_conns_to_clients2[client].send(data)
+    #         self.clients_info.clear()
+    #         self.serverSocket.close()
+    #         print(f"Conference server {self.conference_id} socket closed.")
 
     '''
     多线程版本
@@ -335,7 +335,7 @@ class MainServer:
                     pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
                 self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
             #加入到clients_info    
-            conference_server.clients_info[client_id] = (udp_ip, udp_port)
+            conference_server.clients_info[client_id] = (udp_ip, udp_port, udp_port+1, udp_port+2, udp_port+3)
             if len(conference_server.clients_info) == 2:
                     # 对clients_info两层循环，发送给客户端其他客户端的信息
                     for client in conference_server.clients_info:
