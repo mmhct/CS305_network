@@ -54,6 +54,8 @@ class ConferenceClient:
         self.udp_sockets = []  # 存储收资料的udp套接字
         self.udp_conn = None  # 用于接收数据的udp套接字
         self.others = set()  # 除自己以外所有在会议室的人的id
+        for i in range(40):
+            self.others.add(i)
         self.mode = 'cs'
         self.p2p_ip = None
         self.p2p_port = None
@@ -262,19 +264,20 @@ class ConferenceClient:
                 image_tuple = pickle.dumps(image_tuple)
                 # 分支
                 if self.mode == 'p2p':
-                    print("p2p mode")
+                    # print("p2p mode")
                     if self.is_camera_on:
-                        print("sending camera data to p2p")
+                        # print("sending camera data to p2p")
                         self.sock.sendto(image_tuple, self.p2p_camera_conn)
                 else:
                     if self.is_camera_on:
-                        print("sending camera data to server")
+                        # print("sending camera data to server")
                         self.sock.sendto(image_tuple, self.conference_camera_conn)
-                print("keep sharing data")
+                # print("keep sharing data")
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                e = str(e)
+                # print(f"Socket error: {e}")
 
-            time.sleep(0.03)  # 控制刷新率
+            time.sleep(0.05)  # 控制刷新率
 
     def keep_share_screen(self):
         '''
@@ -285,11 +288,11 @@ class ConferenceClient:
         screen_pieces_count = 0
         while True:
             if not self.on_meeting:
-                time.sleep(0.03)  # 控制刷新率
+                time.sleep(0.05)  # 控制刷新率
                 continue
             try:
                 screen = capture_screen()
-                screen_pieces = split_image(screen, 7)
+                screen_pieces = split_image(screen, 6)
                 for i, piece in enumerate(screen_pieces):
                     screen_pieces[i] = compress_image(piece)
                 screen_tuples = []
@@ -299,21 +302,22 @@ class ConferenceClient:
                     screen_tuples.append(screen_tuple)
                 # 分支
                 if self.mode == 'p2p':
-                    print("p2p mode")
+                    # print("p2p mode")
                     if self.is_screen_on:
-                        print("sending screen data to p2p")
+                        # print("sending screen data to p2p")
                         for screen_tuple in screen_tuples:
                             self.sock.sendto(screen_tuple, self.p2p_screen_conn)
                 else:
                     if self.is_screen_on:
-                        print("sending screen data to server")
+                        # print("sending screen data to server")
                         for screen_tuple in screen_tuples:
                             self.sock.sendto(screen_tuple, self.conference_screen_conn)
-                print("keep sharing data")
+                # print("keep sharing data")
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                e = str(e)
+                # print(f"Socket error: {e}")
 
-            time.sleep(0.03)  # 控制刷新率
+            time.sleep(0.05)  # 控制刷新率
 
     def keep_share_audio(self):
         '''
@@ -345,7 +349,7 @@ class ConferenceClient:
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
 
-            time.sleep(0.03)  # 控制刷新率
+            time.sleep(0.05)  # 控制刷新率
 
     def share_switch(self, data_type):
         '''
@@ -384,7 +388,7 @@ class ConferenceClient:
             try:
                 data, addr = self.sock_camera.recvfrom(65536)
                 received_tuple = pickle.loads(data)
-                print(f"received data from {addr}: {len(data)} bytes")
+                # print(f"received data from {addr}: {len(data)} bytes")
                 id = received_tuple[0]
                 type_ = received_tuple[1]
                 if type_ == 'image':
@@ -404,13 +408,13 @@ class ConferenceClient:
                     text = received_tuple[2]
                     print(text)
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                # print(f"Socket error: {e}")
                 break
 
     def keep_recv_screen(self):
         while True:
             if not self.on_meeting:
-                time.sleep(0.03)  # 控制刷新率
+                time.sleep(0.05)  # 控制刷新率
                 continue
             try:
                 data, addr = self.sock_screen.recvfrom(65536)
@@ -435,18 +439,18 @@ class ConferenceClient:
                     text = received_tuple[2]
                     print(text)
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                # print(f"Socket error: {e}")
                 break
 
     def keep_recv_audio(self):
         while True:
             if not self.on_meeting:
-                time.sleep(0.03)  # 控制刷新率
+                time.sleep(0.05)  # 控制刷新率
                 continue
             try:
                 data, addr = self.sock_audio.recvfrom(65536)
                 received_tuple = pickle.loads(data)
-                print(f"received data from {addr}: {len(data)} bytes")
+                # print(f"received data from {addr}: {len(data)} bytes")
                 id = received_tuple[0]
                 type_ = received_tuple[1]
                 if type_ == 'image':
@@ -466,7 +470,7 @@ class ConferenceClient:
                     text = received_tuple[2]
                     print(text)
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                # print(f"Socket error: {e}")
                 break
 
     def reset(self):
@@ -488,7 +492,7 @@ class ConferenceClient:
         播放音频数据
         """
         global count
-        print('[Info]: Playing audio...')
+        # print('[Info]: Playing audio...')
         threading.Thread(
             target=audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK).write,
             args=(audio_data,)).start()
@@ -533,7 +537,7 @@ class ConferenceClient:
             self.recv_screen_data[client_id] = {}
 
         if image_id not in self.recv_screen_data[client_id]:
-            self.recv_screen_data[client_id][image_id] = [None] * 7  # Initialize a list with 7 None elements
+            self.recv_screen_data[client_id][image_id] = [None] * 6  # Initialize a list with 7 None elements
 
         self.recv_screen_data[client_id][image_id][index] = screen_data
 
@@ -555,11 +559,11 @@ class ConferenceClient:
         self.others.add(0)
         # self.others.add(1)
         while True:
-            # if count == 1000:
+            # if dis_count == 1000:
             #     self.recv_screen_data.clear()
             #     self.recv_video_data.clear()
-            #     count = 0
-            # count += 1
+            #     dis_count = 0
+            # dis_count += 1
             self.recv_video_data[0] = capture_camera()
             self.screen_to_display[0] = capture_screen()
             self.screen_to_display_count[0] = 0
@@ -588,7 +592,7 @@ class ConferenceClient:
                     if cv2.getWindowProperty(str(client_id), cv2.WND_PROP_VISIBLE):
                         cv2.destroyWindow(str(client_id))
 
-            time.sleep(0.03)  # 控制刷新率
+            time.sleep(0.05)  # 控制刷新率
 
     def start_conference(self):
         '''
@@ -713,7 +717,7 @@ class ConferenceClient:
 
 
             except (socket.error, OSError) as e:
-                print(f"Socket error: {e}")
+                # print(f"Socket error: {e}")
                 break
 
     def run(self):
