@@ -139,6 +139,7 @@ class ConferenceServer:
     '''
     多线程版本
     '''
+
     def start_camera(self):
         '''
         start the ConferenceServer and necessary running tasks to handle clients in this conference
@@ -271,6 +272,7 @@ class ConferenceServer:
             self.serverSocket_audio.close()
             print(f"Conference server {self.conference_id} audio socket closed.")
 
+
 class MainServer:
     def __init__(self, server_ip, main_port, main_port2):
         # async server
@@ -300,7 +302,8 @@ class MainServer:
         conference_server.owner_ip = addr[0]
         conference_server.owner_port = addr[1]
         conference_server.MainServer = self
-        conference_server.clients_info[client_id] = (udp_ip, udp_port, udp_port+1, udp_port+2, udp_port+3)  # 将用户id和udp套接字地址存入
+        conference_server.clients_info[client_id] = (
+        udp_ip, udp_port, udp_port + 1, udp_port + 2, udp_port + 3)  # 将用户id和udp套接字地址存入
         print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
         self.conference_servers[conference_id] = conference_server
         # threading.Thread(target=conference_server.start).start()
@@ -334,20 +337,20 @@ class MainServer:
                 self.tcp_conns_to_clients2[client].send(
                     pickle.dumps((client_id, "join", f"Client {client_id} comes in.")))
                 self.tcp_conns_to_clients2[client_id].send(pickle.dumps((client, "join", f"Client {client} exists.")))
-            #加入到clients_info    
-            conference_server.clients_info[client_id] = (udp_ip, udp_port, udp_port+1, udp_port+2, udp_port+3)
+            # 加入到clients_info
+            conference_server.clients_info[client_id] = (udp_ip, udp_port, udp_port + 1, udp_port + 2, udp_port + 3)
             if len(conference_server.clients_info) == 2:
-                    # 对clients_info两层循环，发送给客户端其他客户端的信息
-                    for client in conference_server.clients_info:
-                        for client_other in conference_server.clients_info:
-                            if client != client_other:
-                                self.tcp_conns_to_clients2[client].send(
-                                    pickle.dumps((client_other, "p2p", conference_server.clients_info[client_other])))
+                # 对clients_info两层循环，发送给客户端其他客户端的信息
+                for client in conference_server.clients_info:
+                    for client_other in conference_server.clients_info:
+                        if client != client_other:
+                            self.tcp_conns_to_clients2[client].send(
+                                pickle.dumps((client_other, "p2p", conference_server.clients_info[client_other])))
             if len(conference_server.clients_info) >= 3:
                 for client in conference_server.clients_info:
                     self.tcp_conns_to_clients2[client].send(
-                                    pickle.dumps((0, "cs", "")))
-                    
+                        pickle.dumps((0, "cs", "")))
+
             print(f"Client{client_id} added to Conference{conference_id}: UDP {(udp_ip, udp_port)}")
             print(f"client info {conference_server.clients_info}")
             # Perform operations on the existing conference_server thread
@@ -386,7 +389,7 @@ class MainServer:
                 if len(conference_server.clients_info) == 1:
                     for client in conference_server.clients_info:
                         self.tcp_conns_to_clients2[client].send(
-                                    pickle.dumps((0, "cs", "")))
+                            pickle.dumps((0, "cs", "")))
                 if len(conference_server.clients_info) == 0:
                     # 如果所有人离开会议，自动取消会议
                     conference_server.cancel_conference()
@@ -423,7 +426,7 @@ class MainServer:
 
         if conference_id in self.conference_servers:
             conference_server = self.conference_servers[conference_id]
-            for other_client_id, addr in conference_server.clients_info.items():
+            for other_client_id, _ in conference_server.clients_info.items():
                 if other_client_id != client_id:
                     try:
                         temp = (client_id, 'switch', message)
@@ -479,7 +482,7 @@ class MainServer:
     def find_conference_and_client_by_ip(self, conference_server, ip):
         for conference_id, conference in conference_server.items():
             for client_id, client_address in conference.clients_info.items():
-                client_ip, _ = client_address
+                client_ip, _, _, _, _ = client_address
                 if client_ip == ip:
                     return client_id, conference_id
         return None, None  # 如果没有找到该地址，返回 None
