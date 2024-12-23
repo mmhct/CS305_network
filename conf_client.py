@@ -317,7 +317,7 @@ class ConferenceClient:
                     self.store_image(id, image)
                 elif type_ == 'audio':
                     audio_data = received_tuple[2]
-                    self.play_audio(id,audio_data)
+                    self.play_audio(audio_data)
                 elif type_ == 'screen':
                     index = received_tuple[2]
                     screen_index = received_tuple[3]
@@ -342,21 +342,13 @@ class ConferenceClient:
         self.conference_conn = None
         self.others.clear()
 
-    def play_audio(self, id, audio_data):
+    def play_audio(self, audio_data):
         """
         播放音频数据
         """
         global count
         print('[Info]: Playing audio...')
-        if id in self.audio_data:
-            self.audio_data[id] += audio_data
-        else:
-            self.audio_data[id] = audio_data
-        if count >= 8:
-            combined_audio = self.mix_audio_data()
-            streamout.write(combined_audio)
-            count = 0
-            self.audio_data.clear()
+        threading.Thread(target=audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK).write, args=(audio_data,)).start()
 
     def mix_audio_data(self):
         """
