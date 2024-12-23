@@ -170,8 +170,8 @@ class ConferenceServer:
                 # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
                 # for client in clients_info_copy.values():
                 for client in self.clients_info.values():
-                    # if client != addr:  # 不回发给发送者
-                    self.serverSocket_camera.sendto(data, (client[0], client[2]))
+                    if client[0] != addr[0]:  # 不回发给发送者
+                        self.serverSocket_camera.sendto(data, (client[0], client[2]))
                     # print(f"Forwarded data to {(client[0], client[2])}")
         except OSError as e:
             # print(f"Error occurred: {e}")
@@ -215,8 +215,8 @@ class ConferenceServer:
                 # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
                 # for client in clients_info_copy.values():
                 for client in self.clients_info.values():
-                    # if client != addr:  # 不回发给发送者
-                    self.serverSocket_screen.sendto(data, (client[0], client[3]))
+                    if client[0] != addr[0]:  # 不回发给发送者
+                        self.serverSocket_screen.sendto(data, (client[0], client[3]))
                     # print(f"Forwarded data to {(client[0], client[3])}")
         except OSError as e:
             # print(f"Error occurred: {e}")
@@ -260,8 +260,8 @@ class ConferenceServer:
                 # clients_info_copy = self.clients_info.copy() # 防止字典在迭代过程中被修改
                 # for client in clients_info_copy.values():
                 for client in self.clients_info.values():
-                    # if client != addr:  # 不回发给发送者
-                    self.serverSocket_audio.sendto(data, (client[0], client[4]))
+                    if client[0] != addr[0]:  # 不回发给发送者
+                        self.serverSocket_audio.sendto(data, (client[0], client[4]))
                     # print(f"Forwarded data to {(client[0], client[4])}")
         except OSError as e:
             # print(f"Error occurred: {e}")
