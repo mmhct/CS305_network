@@ -619,6 +619,8 @@ class ConferenceClient:
 
             recognized = True
             cmd_input = input(f'({status}) Please enter a operation (enter "?" to help): ').strip().lower()
+            if len(cmd_input) == 0:
+                continue
             fields = cmd_input.split(maxsplit=1)
             # print(fields)
 
