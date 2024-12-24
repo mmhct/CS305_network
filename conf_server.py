@@ -181,7 +181,7 @@ class ConferenceServer:
             data = pickle.dumps(('', 'exit', ''))
             for client in self.clients_info.keys():
                 self.MainServer.tcp_conns_to_clients2[client].send(data)
-            self.clients_info.clear()
+            # self.clients_info.clear()
             self.serverSocket_camera.close()
             print(f"Conference server {self.conference_id} camera socket closed.")
 
@@ -226,7 +226,7 @@ class ConferenceServer:
             data = pickle.dumps(('', 'exit', ''))
             for client in self.clients_info.keys():
                 self.MainServer.tcp_conns_to_clients2[client].send(data)
-            self.clients_info.clear()
+            # self.clients_info.clear()
             self.serverSocket_screen.close()
             print(f"Conference server {self.conference_id} screen socket closed.")
 
@@ -271,7 +271,7 @@ class ConferenceServer:
             data = pickle.dumps(('', 'exit', ''))
             for client in self.clients_info.keys():
                 self.MainServer.tcp_conns_to_clients2[client].send(data)
-            self.clients_info.clear()
+            # self.clients_info.clear()
             self.serverSocket_audio.close()
             print(f"Conference server {self.conference_id} audio socket closed.")
 
