@@ -493,6 +493,10 @@ class ConferenceClient:
         """
         global count
         # print('[Info]: Playing audio...')
+
+        # streamout.write(audio_data) # 播放音频原始方法
+
+
         threading.Thread(
             target=audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK).write,
             args=(audio_data,)).start()
@@ -556,7 +560,7 @@ class ConferenceClient:
         显示图像和屏幕数据
         """
 
-        self.others.add(0)
+        # self.others.add(0)
         # self.others.add(1)
         while True:
             # if dis_count == 1000:
@@ -564,10 +568,10 @@ class ConferenceClient:
             #     self.recv_video_data.clear()
             #     dis_count = 0
             # dis_count += 1
-            self.recv_video_data[0] = capture_camera()
-            self.screen_to_display[0] = capture_screen()
-            self.screen_to_display_count[0] = 0
-            self.video_display_count[0] = 0
+            # self.recv_video_data[0] = capture_camera()
+            # self.screen_to_display[0] = capture_screen()
+            # self.screen_to_display_count[0] = 0
+            # self.video_display_count[0] = 0
 
             others_copy = self.others.copy()
             for client_id in others_copy:
