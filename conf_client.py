@@ -627,6 +627,7 @@ class ConferenceClient:
                 text = f"text {self.id} {self.conference_id} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}: {text}"
                 # text_tuple = (self.id, 'text', text)
                 # text_tuple = pickle.dumps(text_tuple)
+                #jdsa
                 print("sending text data to server")
                 self.tcp_conn.sendall(pickle.dumps(text))
 
