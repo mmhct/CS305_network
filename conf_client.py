@@ -267,11 +267,11 @@ class ConferenceClient:
                     # print("p2p mode")
                     if self.is_camera_on:
                         # print("sending camera data to p2p")
-                        self.sock.sendto(image_tuple, self.p2p_camera_conn)
+                        self.sock_camera.sendto(image_tuple, self.p2p_camera_conn)
                 else:
                     if self.is_camera_on:
                         # print("sending camera data to server")
-                        self.sock.sendto(image_tuple, self.conference_camera_conn)
+                        self.sock_camera.sendto(image_tuple, self.conference_camera_conn)
                 # print("keep sharing data")
             except (socket.error, OSError) as e:
                 e = str(e)
@@ -306,12 +306,12 @@ class ConferenceClient:
                     if self.is_screen_on:
                         # print("sending screen data to p2p")
                         for screen_tuple in screen_tuples:
-                            self.sock.sendto(screen_tuple, self.p2p_screen_conn)
+                            self.sock_screen.sendto(screen_tuple, self.p2p_screen_conn)
                 else:
                     if self.is_screen_on:
                         # print("sending screen data to server")
                         for screen_tuple in screen_tuples:
-                            self.sock.sendto(screen_tuple, self.conference_screen_conn)
+                            self.sock_screen.sendto(screen_tuple, self.conference_screen_conn)
                 # print("keep sharing data")
             except (socket.error, OSError) as e:
                 e = str(e)
@@ -340,11 +340,11 @@ class ConferenceClient:
                     # print("p2p mode")
                     if self.is_audio_on:
                         # print("sending audio data to p2p")
-                        self.sock.sendto(audio_tuple, self.p2p_audio_conn)
+                        self.sock_audio.sendto(audio_tuple, self.p2p_audio_conn)
                 else:
                     if self.is_audio_on:
                         # print("sending audio data to server")
-                        self.sock.sendto(audio_tuple, self.conference_audio_conn)
+                        self.sock_audio.sendto(audio_tuple, self.conference_audio_conn)
                 # print("keep sharing data")
             except (socket.error, OSError) as e:
                 print(f"Socket error: {e}")
