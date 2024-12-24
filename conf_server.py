@@ -460,6 +460,7 @@ class MainServer:
         client_id = int(field[1])
         conference_id = int(field[2])
         text = field[3]
+        print(text)
         if conference_id in self.conference_servers:
             conference_server = self.conference_servers[conference_id]
             for client in conference_server.clients_info:
@@ -499,6 +500,7 @@ class MainServer:
         elif message.startswith('search'):
             return self.handle_search_conference()
         elif message.startswith('text'):
+            print("handling text message")
             return self.handle_text_message(message)
         # invalid 指令
         else:
