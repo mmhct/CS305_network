@@ -620,14 +620,15 @@ class ConferenceClient:
             recognized = True
             cmd_input = input(f'({status}) Please enter a operation (enter "?" to help): ').strip().lower()
             fields = cmd_input.split(maxsplit=1)
+            # print(fields)
 
             if fields[0] == 'text':
                 text = fields[1]
-                text = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}:{text}"
-                text_tuple = (self.id, 'text', text)
-                text_tuple = pickle.dumps(text_tuple)
+                text = f"text {self.id} {self.conference_id} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {NAME}: {text}"
+                # text_tuple = (self.id, 'text', text)
+                # text_tuple = pickle.dumps(text_tuple)
                 print("sending text data to server")
-                self.sock.sendto(text_tuple, self.conference_conn)
+                self.tcp_conn.sendall(pickle.dumps(text))
 
             elif len(fields) == 1:
                 if cmd_input in ('?', '？'):
@@ -697,7 +698,7 @@ class ConferenceClient:
                     #     del self.recv_screen_data[other_id]
                     # 现在的实现形式不需要删除，只需要不展示即可
                     print(f"Client {other_id} left")
-                    print(self.others)
+                    # print(self.others)
                 elif type_ == 'exit':
                     print(f"Conference {self.conference_id} has been canceled")
                     self.reset()

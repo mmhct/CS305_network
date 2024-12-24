@@ -450,6 +450,24 @@ class MainServer:
         search conference: return all the available conference
         """
         return " ".join(str(key) for key in self.conference_servers.keys())
+    
+    def handle_text_message(self, message):
+        """
+        text message: send text message to all clients in the same conference
+        """
+        # text = f"text {self.id} {self.conference_id} {datetime.now().strftime('%Y-%m %d %H:%M:%S')} {NAME}:{text}"
+        field = message.split(maxsplit=3)
+        client_id = int(field[1])
+        conference_id = int(field[2])
+        text = field[3]
+        if conference_id in self.conference_servers:
+            conference_server = self.conference_servers[conference_id]
+            for client in conference_server.clients_info:
+                self.tcp_conns_to_clients2[client].send(pickle.dumps((client_id, "text", text)))
+            return {"status": "success"}
+        else:
+            return {"status": "error", "message": "Conference not found"}            
+
 
     def request_handler(self, addr, message):
         """
@@ -480,6 +498,8 @@ class MainServer:
             return self.handle_switch_conference(message)
         elif message.startswith('search'):
             return self.handle_search_conference()
+        elif message.startswith('text'):
+            return self.handle_text_message(message)
         # invalid 指令
         else:
             return "Invalid command"
