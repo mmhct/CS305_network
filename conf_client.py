@@ -688,7 +688,7 @@ class ConferenceClient:
                 elif type_ == 'join':
                     self.others.add(other_id)
                     print(f"Client {other_id} joined")
-                    print(self.others)
+                    # print(self.others)
                 elif type_ == 'quit':
                     self.others.discard(other_id)
                     # if other_id in self.recv_video_data:
